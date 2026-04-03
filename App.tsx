@@ -1,38 +1,13 @@
-import { StatusBar, StyleSheet, View } from 'react-native';
-import LocationButton from './src/components/LocationButton';
-import { handleLocationPress } from './src/utils/locationHandler';
+import { NavigationContainer } from '@react-navigation/native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import GlobeScreen, { GlobeScreenHandle } from './src/screens/GlobeScreen';
-import { useRef } from 'react';
+import AppNavigator from './src/navigation/AppNavigator';
 
-function App() {
-  const globeRef = useRef<GlobeScreenHandle>(null);
-
-  const onLocationPress = () => {
-    handleLocationPress((lat, lng) => {
-      globeRef.current?.sendLocation(lat, lng);
-    });
-  };
-
+export default function App() {
   return (
     <SafeAreaProvider>
-      <View style={styles.container}>
-
-        {/* Globe Screen */}
-        <GlobeScreen ref={globeRef} />
-
-        {/* Floating Location Button */}
-        <LocationButton onPress={onLocationPress} />
-
-      </View>
+      <NavigationContainer>
+        <AppNavigator />
+      </NavigationContainer>
     </SafeAreaProvider>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-});
-
-export default App;
