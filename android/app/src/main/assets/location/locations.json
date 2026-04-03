@@ -1,0 +1,19 @@
+{
+    "locations": [
+        {
+            "name": "Madhyapradesh",
+            "lat": 20.9312,
+            "lng": 76.2673
+        },
+        {
+            "name": "Delhi",
+            "lat": 28.6139,
+            "lng": 77.2090
+        },
+        {
+            "name": "New York",
+            "lat": 40.7128,
+            "lng": -74.0060
+        }
+    ]
+}

@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta name="viewport" content="initial-scale=1, maximum-scale=1">
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background: black;
+        }
+
+        #error-box {
+            display: none;
+            position: fixed;
+            top: 10px;
+            left: 10px;
+            right: 10px;
+            background: rgba(255, 0, 0, 0.8);
+            color: white;
+            padding: 10px;
+            font-family: monospace;
+            font-size: 12px;
+            border-radius: 6px;
+            z-index: 9999;
+            word-break: break-all;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="error-box"></div>
+
+    <!-- Load Three.js as a regular (non-module) script via CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+
+    <script>
+        function showError(msg) {
+            var box = document.getElementById('error-box');
+            box.style.display = 'block';
+            box.textContent = msg;
+        }
+
+        window.onerror = function (msg, src, line, col, err) {
+            showError('JS Error: ' + msg + ' (line ' + line + ')');
+        };
+
+        try {
+            var scene, camera, renderer, globe;
+            var pendingLocations = null; // holds locations until globe is ready
+            var globeLocalRadius = 1.0;  // updated after GLB loads
+
+            var targetCameraPos = null;
+            var isAnimatingCamera = false;
+
+            var width = window.innerWidth;
+            var height = window.innerHeight;
+
+            // Scene
+            scene = new THREE.Scene();
+
+            // Camera
+            camera = new THREE.PerspectiveCamera(75, width / height, 0.1, 1000);
+            camera.position.z = 10;
+
+            // Renderer
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(width, height);
+            renderer.setPixelRatio(window.devicePixelRatio);
+            document.body.appendChild(renderer.domElement);
+
+            // Lights
+            var light = new THREE.DirectionalLight(0xffffff, 1.2);
+            light.position.set(5, 5, 5);
+            scene.add(light);
+            scene.add(new THREE.AmbientLight(0xffffff, 0.5));
+
+            // Texture
+            var textureLoader = new THREE.TextureLoader();
+            var texture = textureLoader.load(
+                'file:///android_asset/globe/globe_texture.jpeg',
+                function (tex) {
+                    tex.flipY = false;
+                    tex.wrapS = THREE.RepeatWrapping;
+                    tex.repeat.x = 1;
+                    tex.offset.x = 0;
+                    tex.needsUpdate = true;
+                },
+                undefined,
+                function (e) { showError('Texture load error: ' + e); }
+            );
+
+            // ── Touch state ──────────────────────────────────────────
+            var isDragging = false;
+            var prevTouch = { x: 0, y: 0 };
+            var velocity = { x: 0, y: 0 };   // inertia
+            var prevPinchDist = 0;
+            var camDist = 10;                 // will be updated after load
+            var minDist, maxDist;
+
+            function getTouchDist(t) {
+                var dx = t[0].clientX - t[1].clientX;
+                var dy = t[0].clientY - t[1].clientY;
+                return Math.sqrt(dx * dx + dy * dy);
+            }
+
+            renderer.domElement.addEventListener('touchstart', function (e) {
+                e.preventDefault();
+                velocity.x = 0;
+                velocity.y = 0;
+                if (e.touches.length === 1) {
+                    isDragging = true;
+                    prevTouch.x = e.touches[0].clientX;
+                    prevTouch.y = e.touches[0].clientY;
+                } else if (e.touches.length === 2) {
+                    isDragging = false;
+                    prevPinchDist = getTouchDist(e.touches);
+                }
+            }, { passive: false });
+
+            renderer.domElement.addEventListener('touchmove', function (e) {
+                e.preventDefault();
+                if (e.touches.length === 1 && isDragging && globe) {
+                    var dx = e.touches[0].clientX - prevTouch.x;
+                    var dy = e.touches[0].clientY - prevTouch.y;
+                    velocity.x = dx;
+                    velocity.y = dy;
+                    globe.rotation.y += dx * 0.006;
+                    globe.rotation.x += dy * 0.006;
+                    prevTouch.x = e.touches[0].clientX;
+                    prevTouch.y = e.touches[0].clientY;
+                } else if (e.touches.length === 2) {
+                    var dist = getTouchDist(e.touches);
+                    var delta = prevPinchDist - dist;   // +ve = pinching in = zoom out
+                    camDist += delta * 0.9;
+                    camDist = Math.max(minDist, Math.min(maxDist, camDist));
+                    camera.position.setLength(camDist);
+                    prevPinchDist = dist;
+                }
+            }, { passive: false });
+
+            renderer.domElement.addEventListener('touchend', function (e) {
+                e.preventDefault();
+                if (e.touches.length === 0) {
+                    isDragging = false;
+                }
+            }, { passive: false });
+            // ─────────────────────────────────────────────────────────
+
+            // GLB Model
+            var loader = new THREE.GLTFLoader();
+            loader.load(
+                'file:///android_asset/globe/globe.glb',
+                function (gltf) {
+                    globe = gltf.scene;
+
+                    globe.traverse(function (child) {
+                        if (child.isMesh) {
+                            child.material.map = texture;
+                            child.material.needsUpdate = true;
+                        }
+                    });
+
+                    globe.scale.set(5, 5, 5);
+                    globe.position.set(0, 0, 0);
+                    scene.add(globe);
+
+                    // Auto-fit camera
+                    var box = new THREE.Box3().setFromObject(globe);
+                    var center = box.getCenter(new THREE.Vector3());
+                    var size = box.getSize(new THREE.Vector3());
+                    var maxDim = Math.max(size.x, size.y, size.z);
+                    // Markers are globe children → positions in LOCAL space (pre-scale ÷5)
+                    globeLocalRadius = (maxDim / 2) / 5;
+                    var fov = camera.fov * (Math.PI / 180);
+                    camDist = Math.abs(maxDim / (2 * Math.tan(fov / 2))) * 1.5;
+                    minDist = camDist * 0.7;   // max zoom in
+                    maxDist = camDist * 2.0;   // max zoom out
+                    camera.position.set(center.x, center.y, center.z + camDist);
+                    camera.near = camDist / 100;
+                    camera.far = camDist * 100;
+                    camera.updateProjectionMatrix();
+                    globe.position.sub(center);
+
+
+                    animate();
+
+                    // If locations were already loaded before the globe, add them now
+                    if (pendingLocations) {
+                        pendingLocations.forEach(function (loc) {
+                            addMarker(loc.lat, loc.lng);
+                        });
+                        pendingLocations = null;
+                    }
+                },
+                undefined,
+                function (error) {
+                    showError('GLB load error: ' + error);
+                }
+            );
+
+            console.log("Starting JSON load via XHR...");
+
+            var xhr = new XMLHttpRequest();
+            xhr.open('GET', 'file:///android_asset/location/locations.json', true);
+            xhr.onload = function () {
+                console.log("XHR status:", xhr.status, "readyState:", xhr.readyState);
+                try {
+                    var data = JSON.parse(xhr.responseText);
+                    console.log("JSON parsed:", data);
+                    var locs = data.locations;
+                    if (!locs) { throw new Error('No locations key in JSON'); }
+                    if (globe) {
+                        // Globe already loaded — add markers immediately
+                        locs.forEach(function (loc) {
+                            console.log("Adding marker:", loc);
+                            addMarker(loc.lat, loc.lng);
+                        });
+                    } else {
+                        // Globe not ready yet — store and add later
+                        pendingLocations = locs;
+                    }
+                } catch (parseErr) {
+                    console.error("JSON parse error:", parseErr);
+                    showError("JSON parse error: " + parseErr);
+                }
+            };
+            xhr.onerror = function () {
+                console.error("XHR error loading locations.json");
+                showError("JSON load error: XHR failed (check file path)");
+            };
+            xhr.send();
+
+            // Resize
+            window.addEventListener('resize', function () {
+                var w = window.innerWidth;
+                var h = window.innerHeight;
+                camera.aspect = w / h;
+                camera.updateProjectionMatrix();
+                renderer.setSize(w, h);
+            });
+
+            // ── Global function called by React Native injectJavaScript ──
+            window.__rnAddMarker = function (lat, lng) {
+                console.log('__rnAddMarker called:', lat, lng);
+                if (globe) {
+                    // addMarker(lat, lng);
+                    moveCameraToLatLng(lat, lng);
+                } else {
+                    if (!pendingLocations) pendingLocations = [];
+                    pendingLocations.push({ lat: lat, lng: lng });
+                }
+            };
+            // ─────────────────────────────────────────────────────────
+
+
+
+            function animate() {
+                requestAnimationFrame(animate);
+
+                if (globe) {
+
+                    // 🌍 Smooth camera movement
+                    if (isAnimatingCamera && targetCameraPos) {
+                        camera.position.lerp(targetCameraPos, 0.05);
+
+                        // Always look at center
+                        camera.lookAt(0, 0, 0);
+
+                        // Stop condition
+                        if (camera.position.distanceTo(targetCameraPos) < 0.01) {
+                            isAnimatingCamera = false;
+                        }
+                    }
+
+                    if (!isDragging) {
+                        velocity.x *= 0.92;
+                        velocity.y *= 0.92;
+                        globe.rotation.y += velocity.x * 0.005;
+                        globe.rotation.x += velocity.y * 0.005;
+                    }
+                }
+
+                renderer.render(scene, camera);
+            }
+
+            function latLngToVector3(lat, lng, radius) {
+                var phi = (90 - lat) * (Math.PI / 180);
+                var theta = (lng + 180) * (Math.PI / 180);
+
+                var x = -radius * Math.sin(phi) * Math.cos(theta);
+                var z = radius * Math.sin(phi) * Math.sin(theta);
+                var y = radius * Math.cos(phi);
+
+                return new THREE.Vector3(x, y, z);
+            }
+
+            function addMarker(lat, lng) {
+                // Place marker just above globe surface in LOCAL coordinate space
+                var markerRadius = globeLocalRadius * 1.005;
+                var markerSize = globeLocalRadius * 0.006;  // visible but not huge
+
+                var pos = latLngToVector3(lat, lng, markerRadius);
+
+                var geometry = new THREE.SphereGeometry(markerSize, 16, 16);
+                var material = new THREE.MeshBasicMaterial({ color: 0xff3333 });
+
+                var marker = new THREE.Mesh(geometry, material);
+                marker.position.copy(pos);
+
+                globe.add(marker);
+            }
+
+            function moveCameraToLatLng(lat, lng) {
+                if (!globe) return;
+
+                var radius = globeLocalRadius * 2.5; // camera distance from surface
+
+                var target = latLngToVector3(lat, lng, radius);
+
+                targetCameraPos = target;
+                isAnimatingCamera = true;
+            }
+
+        } catch (e) {
+            showError('Init error: ' + e.message);
+        }
+    </script>
+
+</body>
+
+</html>
