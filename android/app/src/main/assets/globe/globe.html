@@ -51,8 +51,9 @@
             var pendingLocations = null; // holds locations until globe is ready
             var globeLocalRadius = 1.0;  // updated after GLB loads
 
-            var targetCameraPos = null;
-            var isAnimatingCamera = false;
+            var targetGlobeRx = null;
+            var targetGlobeRy = null;
+            var isAnimatingGlobe = false;
 
             var width = window.innerWidth;
             var height = window.innerHeight;
@@ -109,6 +110,7 @@
                 e.preventDefault();
                 velocity.x = 0;
                 velocity.y = 0;
+                isAnimatingGlobe = false;
                 if (e.touches.length === 1) {
                     isDragging = true;
                     prevTouch.x = e.touches[0].clientX;
@@ -177,10 +179,11 @@
                     camDist = Math.abs(maxDim / (2 * Math.tan(fov / 2))) * 1.5;
                     minDist = camDist * 0.7;   // max zoom in
                     maxDist = camDist * 2.0;   // max zoom out
-                    camera.position.set(center.x, center.y, center.z + camDist);
+                    camera.position.set(0, 0, camDist);
                     camera.near = camDist / 100;
                     camera.far = camDist * 100;
                     camera.updateProjectionMatrix();
+                    camera.lookAt(0, 0, 0);
                     globe.position.sub(center);
 
 
@@ -246,7 +249,7 @@
                 console.log('__rnAddMarker called:', lat, lng);
                 if (globe) {
                     // addMarker(lat, lng);
-                    moveCameraToLatLng(lat, lng);
+                    rotateGlobeToLatLng(lat, lng);
                 } else {
                     if (!pendingLocations) pendingLocations = [];
                     pendingLocations.push({ lat: lat, lng: lng });
@@ -261,20 +264,20 @@
 
                 if (globe) {
 
-                    // 🌍 Smooth camera movement
-                    if (isAnimatingCamera && targetCameraPos) {
-                        camera.position.lerp(targetCameraPos, 0.05);
+                    // 🌍 Smooth globe rotation
+                    if (isAnimatingGlobe) {
+                        globe.rotation.x += (targetGlobeRx - globe.rotation.x) * 0.05;
+                        globe.rotation.y += (targetGlobeRy - globe.rotation.y) * 0.05;
 
-                        // Always look at center
-                        camera.lookAt(0, 0, 0);
+                        var dx = targetGlobeRx - globe.rotation.x;
+                        var dy = targetGlobeRy - globe.rotation.y;
 
-                        // Stop condition
-                        if (camera.position.distanceTo(targetCameraPos) < 0.01) {
-                            isAnimatingCamera = false;
+                        if (Math.abs(dx) < 0.001 && Math.abs(dy) < 0.001) {
+                            globe.rotation.x = targetGlobeRx;
+                            globe.rotation.y = targetGlobeRy;
+                            isAnimatingGlobe = false;
                         }
-                    }
-
-                    if (!isDragging) {
+                    } else if (!isDragging) {
                         velocity.x *= 0.92;
                         velocity.y *= 0.92;
                         globe.rotation.y += velocity.x * 0.005;
@@ -312,15 +315,29 @@
                 globe.add(marker);
             }
 
-            function moveCameraToLatLng(lat, lng) {
+            function rotateGlobeToLatLng(lat, lng) {
                 if (!globe) return;
 
-                var radius = globeLocalRadius * 2.5; // camera distance from surface
+                var targetRx = lat * (Math.PI / 180);
+                var targetRy = (-lng - 90) * (Math.PI / 180);
 
-                var target = latLngToVector3(lat, lng, radius);
+                var currentRy = globe.rotation.y;
+                var diffY = (targetRy - currentRy) % (2 * Math.PI);
+                if (diffY > Math.PI) diffY -= 2 * Math.PI;
+                if (diffY < -Math.PI) diffY += 2 * Math.PI;
 
-                targetCameraPos = target;
-                isAnimatingCamera = true;
+                targetGlobeRy = currentRy + diffY;
+
+                var currentRx = globe.rotation.x;
+                var diffX = (targetRx - currentRx) % (2 * Math.PI);
+                if (diffX > Math.PI) diffX -= 2 * Math.PI;
+                if (diffX < -Math.PI) diffX += 2 * Math.PI;
+
+                targetGlobeRx = currentRx + diffX;
+                
+                velocity.x = 0;
+                velocity.y = 0;
+                isAnimatingGlobe = true;
             }
 
         } catch (e) {
