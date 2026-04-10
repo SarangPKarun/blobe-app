@@ -1,16 +1,47 @@
-import { StyleSheet, View } from 'react-native';
+import React, { useState } from "react";
+import { View, Text, StyleSheet, TouchableOpacity, Alert } from "react-native";
+
+import BottomBar from "../components/BottomBar";
+// import NotificationScreen from "./NotificationScreen";
+import GlobeScreen, { GlobeScreenHandle } from './GlobeScreen';
+
+// import ProfileScreen from "./ProfileScreen";
+// import CreatePostScreen from "./CreatePostScreen";
+
 import LocationButton from '../components/LocationButton';
 import { handleLocationPress } from '../utils/locationHandler';
-import GlobeScreen, { GlobeScreenHandle } from './GlobeScreen';
 import { useRef } from 'react';
 
 import { signOut } from "firebase/auth";
 import { auth } from "../utils/firebaseConfig";
-import { TouchableOpacity, Text, Alert } from "react-native";
 
 
 export default function HomeScreen() {
     const globeRef = useRef<GlobeScreenHandle>(null);
+
+    const [activeTab, setActiveTab] = useState("home");
+
+    const renderContent = () => {
+        switch (activeTab) {
+            case "home":
+                return <Text>Home Feed</Text>;
+
+            case "globe":
+                return <GlobeScreen />;
+
+            // case "create":
+            //     return <CreatePostScreen />;
+
+            // case "notifications":
+            //     return <NotificationScreen />;
+
+            // case "profile":
+            //     return <ProfileScreen />;
+
+            default:
+                return <Text>Home</Text>;
+        }
+    };
 
     const onLocationPress = () => {
         handleLocationPress((lat, lng) => {
@@ -41,6 +72,8 @@ export default function HomeScreen() {
             <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
                 <Text style={styles.logoutText}>Logout</Text>
             </TouchableOpacity>
+            <BottomBar activeTab={activeTab} setActiveTab={setActiveTab} />
+
 
         </View>
     );
@@ -64,5 +97,11 @@ const styles = StyleSheet.create({
     logoutText: {
         color: "white",
         fontWeight: "bold",
-    }
+    },
+    content: {
+        flex: 1,
+        paddingBottom: 80, // 👈 prevent overlap with bottom bar
+        justifyContent: "center",
+        alignItems: "center",
+    },
 });
