@@ -2,11 +2,11 @@ import React, { useState } from "react";
 import { View, Text, StyleSheet, TouchableOpacity, Alert } from "react-native";
 
 import BottomBar from "../components/BottomBar";
-// import NotificationScreen from "./NotificationScreen";
+import NotificationScreen from "./NotificationScreen";
 import GlobeScreen, { GlobeScreenHandle } from './GlobeScreen';
 
-// import ProfileScreen from "./ProfileScreen";
-// import CreatePostScreen from "./CreatePostScreen";
+import ProfileScreen from "./ProfileScreen";
+import CreatePostScreen from "./CreatePostScreen";
 
 import LocationButton from '../components/LocationButton';
 import { handleLocationPress } from '../utils/locationHandler';
@@ -24,22 +24,30 @@ export default function HomeScreen() {
     const renderContent = () => {
         switch (activeTab) {
             case "home":
-                return <Text>Home Feed</Text>;
+                return (
+                    <View style={styles.content}>
+                        <Text>Home Feed</Text>
+                    </View>
+                );
 
             case "globe":
-                return <GlobeScreen />;
+                return <GlobeScreen ref={globeRef} />;
 
-            // case "create":
-            //     return <CreatePostScreen />;
+            case "create":
+                return <CreatePostScreen />;
 
-            // case "notifications":
-            //     return <NotificationScreen />;
+            case "notifications":
+                return <NotificationScreen />;
 
-            // case "profile":
-            //     return <ProfileScreen />;
+            case "profile":
+                return <ProfileScreen />;
 
             default:
-                return <Text>Home</Text>;
+                return (
+                    <View style={styles.content}>
+                        <Text>Home</Text>
+                    </View>
+                );
         }
     };
 
@@ -59,22 +67,18 @@ export default function HomeScreen() {
     };
 
     return (
-
-
         <View style={styles.container}>
-
-            {/* Globe Screen */}
-            <GlobeScreen ref={globeRef} />
+            {renderContent()}
 
             {/* Floating Button */}
-            <LocationButton onPress={onLocationPress} />
+            {activeTab === "globe" && (
+                <LocationButton onPress={onLocationPress} />
+            )}
 
-            <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+            {/* <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
                 <Text style={styles.logoutText}>Logout</Text>
-            </TouchableOpacity>
+            </TouchableOpacity> */}
             <BottomBar activeTab={activeTab} setActiveTab={setActiveTab} />
-
-
         </View>
     );
 }
@@ -100,7 +104,7 @@ const styles = StyleSheet.create({
     },
     content: {
         flex: 1,
-        paddingBottom: 80, // 👈 prevent overlap with bottom bar
+        paddingBottom: 80,
         justifyContent: "center",
         alignItems: "center",
     },

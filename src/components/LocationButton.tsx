@@ -20,7 +20,7 @@ export default LocationButton;
 const styles = StyleSheet.create({
     container: {
         position: 'absolute',
-        bottom: 20,
+        bottom: 100,
         left: 20,
     },
     button: {
