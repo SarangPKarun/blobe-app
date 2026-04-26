@@ -1,4 +1,4 @@
-import React, { forwardRef, useImperativeHandle, useRef } from 'react';
+import React, { forwardRef, useImperativeHandle, useRef, useState } from 'react';
 import { View } from 'react-native';
 import { WebView } from 'react-native-webview';
 
@@ -38,7 +38,7 @@ const GlobeScreen = forwardRef<GlobeScreenHandle>((_, ref) => {
                 allowUniversalAccessFromFileURLs={true}
                 allowingReadAccessToURL={'file:///android_asset/'}
                 mixedContentMode="always"
-                onMessage={() => {}} // required to enable the JS bridge
+                onMessage={() => { }} // required to enable the JS bridge
                 style={{ flex: 1 }}
             />
         </View>

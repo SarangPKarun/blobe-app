@@ -5,8 +5,10 @@ import { signOut } from "firebase/auth";
 import { auth } from "../utils/firebaseConfig";
 
 import { Colors } from "../theme/colors";
+import Icon from "react-native-vector-icons/Ionicons";
 
-export default function ProfileScreen() {
+
+export default function ProfileScreen({ setActiveTab }: { setActiveTab: (tab: string) => void }) {
 
     const handleLogout = async () => {
         try {
@@ -62,6 +64,10 @@ export default function ProfileScreen() {
 
             <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
                 <Text style={styles.logoutText}>Logout</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.notificationButton} onPress={() => setActiveTab("notifications")}>
+                <Icon name="notifications" size={28} color={Colors.primary} />
             </TouchableOpacity>
 
         </View>
@@ -194,5 +200,12 @@ const styles = StyleSheet.create({
     logoutText: {
         color: "white",
         fontWeight: "bold",
+    },
+    notificationButton: {
+        position: "absolute",
+        top: 50,
+        left: 20,
+        padding: 5,
+        zIndex: 10,
     },
 });

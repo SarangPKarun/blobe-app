@@ -4,31 +4,28 @@ import { View, Text, StyleSheet, TouchableOpacity, Alert } from "react-native";
 import BottomBar from "../components/BottomBar";
 import NotificationScreen from "./NotificationScreen";
 import GlobeScreen, { GlobeScreenHandle } from './GlobeScreen';
+import DiscoverScreen from "./DiscoverScreen";
 
 import ProfileScreen from "./ProfileScreen";
 import CreatePostScreen from "./CreatePostScreen";
 
 import LocationButton from '../components/LocationButton';
 import { handleLocationPress } from '../utils/locationHandler';
+import SearchBar from "../components/SearchBar";
 import { useRef } from 'react';
 
-import { signOut } from "firebase/auth";
-import { auth } from "../utils/firebaseConfig";
 
 
 export default function HomeScreen() {
     const globeRef = useRef<GlobeScreenHandle>(null);
 
     const [activeTab, setActiveTab] = useState("home");
+    const [search, setSearch] = useState('');
 
     const renderContent = () => {
         switch (activeTab) {
-            case "home":
-                return (
-                    <View style={styles.content}>
-                        <Text>Home Feed</Text>
-                    </View>
-                );
+            case "discover":
+                return <DiscoverScreen setActiveTab={setActiveTab} />;
 
             case "globe":
                 return <GlobeScreen ref={globeRef} />;
@@ -40,7 +37,7 @@ export default function HomeScreen() {
                 return <NotificationScreen />;
 
             case "profile":
-                return <ProfileScreen />;
+                return <ProfileScreen setActiveTab={setActiveTab} />;
 
             default:
                 return (
@@ -57,14 +54,6 @@ export default function HomeScreen() {
         });
     };
 
-    const handleLogout = async () => {
-        try {
-            await signOut(auth);
-            // No navigation needed — AppNavigator auto redirects
-        } catch (error: any) {
-            Alert.alert("Logout Error", error.message);
-        }
-    };
 
     return (
         <View style={styles.container}>
@@ -75,9 +64,14 @@ export default function HomeScreen() {
                 <LocationButton onPress={onLocationPress} />
             )}
 
-            {/* <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-                <Text style={styles.logoutText}>Logout</Text>
-            </TouchableOpacity> */}
+            {activeTab === "globe" && (
+                <SearchBar
+                    value={search}
+                    onChangeText={setSearch}
+                    onPressSearch={() => console.log(search)}
+                />
+            )}
+
             <BottomBar activeTab={activeTab} setActiveTab={setActiveTab} />
         </View>
     );

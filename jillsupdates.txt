@@ -1,0 +1,28 @@
+register 
+no emai password
+phone number + otp
+google authentication
+username and all in the next page.
+
+login
+phonenumber, username
+password
+
+remove home button
+
+small box in the side to show where the gobe is when we zoom to globe
+
+search bar at the top
+
+movement og the globe like we are rotating full any like. so what to do we have to decide
+
+swipe to go back to globe from anywhere
+
+discover in the center
+
+bottom bar to be transparent to see the globe through. so that no need to minimize
+
+profile screen nte molil notification
+
+when we make upside down the globe the rotation is working opposite
+
