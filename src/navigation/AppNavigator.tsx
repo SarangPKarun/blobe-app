@@ -39,7 +39,7 @@ export default function AppNavigator() {
             {user ? (
                 <>
                     <Stack.Screen
-                        name="Home"
+                        name="Globe"
                         component={HomeScreen}
                     />
 

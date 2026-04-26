@@ -19,7 +19,7 @@ import { useRef } from 'react';
 export default function HomeScreen() {
     const globeRef = useRef<GlobeScreenHandle>(null);
 
-    const [activeTab, setActiveTab] = useState("home");
+    const [activeTab, setActiveTab] = useState("globe");
     const [search, setSearch] = useState('');
 
     const renderContent = () => {
@@ -38,13 +38,6 @@ export default function HomeScreen() {
 
             case "profile":
                 return <ProfileScreen />;
-
-            default:
-                return (
-                    <View style={styles.content}>
-                        <Text>Home</Text>
-                    </View>
-                );
         }
     };
 
