@@ -1,20 +1,26 @@
-import React, { useState } from "react";
-import { View, Text, StyleSheet, TouchableOpacity, Alert } from "react-native";
+import React from "react";
+import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
+import { useNavigation } from "@react-navigation/native";
+
 import { Colors } from "../theme/colors";
 import Icon from "react-native-vector-icons/Ionicons";
 
-export default function DiscoverScreen({ setActiveTab }: { setActiveTab: (tab: string) => void }) {
+export default function DiscoverScreen() {
+    const navigation: any = useNavigation();
 
     return (
         <View style={styles.container}>
-            <TouchableOpacity style={styles.createPostButton} onPress={() => setActiveTab("create")}>
+            <TouchableOpacity
+                style={styles.createPostButton}
+                onPress={() => navigation.navigate("CreatePost")}
+            >
                 <Icon name="add" size={28} color="#fff" />
             </TouchableOpacity>
 
             <Text style={styles.title}>Discover Screen</Text>
-            <Text style={styles.subtitle}>You can discover new posts here</Text>
-
-
+            <Text style={styles.subtitle}>
+                You can discover new posts here
+            </Text>
         </View>
     );
 }

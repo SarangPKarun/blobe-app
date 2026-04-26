@@ -3,12 +3,16 @@ import { View, Text, Image, StyleSheet, TouchableOpacity, Alert } from "react-na
 
 import { signOut } from "firebase/auth";
 import { auth } from "../utils/firebaseConfig";
+import { useNavigation } from "@react-navigation/native";
+
 
 import { Colors } from "../theme/colors";
 import Icon from "react-native-vector-icons/Ionicons";
 
 
-export default function ProfileScreen({ setActiveTab }: { setActiveTab: (tab: string) => void }) {
+export default function ProfileScreen() {
+    const navigation: any = useNavigation();
+
 
     const handleLogout = async () => {
         try {
@@ -66,8 +70,12 @@ export default function ProfileScreen({ setActiveTab }: { setActiveTab: (tab: st
                 <Text style={styles.logoutText}>Logout</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.notificationButton} onPress={() => setActiveTab("notifications")}>
+            <TouchableOpacity style={styles.notificationButton} onPress={() => navigation.navigate("Notification")}>
                 <Icon name="notifications" size={28} color={Colors.primary} />
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.chatButton} onPress={() => navigation.navigate("Chat")} >
+                <Icon name="chatbubble-ellipses" size={28} color={Colors.primary} />
             </TouchableOpacity>
 
         </View>
@@ -188,9 +196,6 @@ const styles = StyleSheet.create({
     },
 
     logoutButton: {
-        position: "absolute",
-        top: 50,
-        right: 20,
         backgroundColor: "#ff4d4d",
         paddingVertical: 8,
         paddingHorizontal: 12,
@@ -205,6 +210,13 @@ const styles = StyleSheet.create({
         position: "absolute",
         top: 50,
         left: 20,
+        padding: 5,
+        zIndex: 10,
+    },
+    chatButton: {
+        position: "absolute",
+        top: 50,
+        right: 20,
         padding: 5,
         zIndex: 10,
     },

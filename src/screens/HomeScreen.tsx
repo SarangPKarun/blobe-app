@@ -25,7 +25,7 @@ export default function HomeScreen() {
     const renderContent = () => {
         switch (activeTab) {
             case "discover":
-                return <DiscoverScreen setActiveTab={setActiveTab} />;
+                return <DiscoverScreen />;
 
             case "globe":
                 return <GlobeScreen ref={globeRef} />;
@@ -37,7 +37,7 @@ export default function HomeScreen() {
                 return <NotificationScreen />;
 
             case "profile":
-                return <ProfileScreen setActiveTab={setActiveTab} />;
+                return <ProfileScreen />;
 
             default:
                 return (

@@ -4,6 +4,9 @@ import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import LoginScreen from "../screens/LoginScreen";
 import RegisterScreen from "../screens/RegisterScreen";
 import HomeScreen from "../screens/HomeScreen";
+import CreatePostScreen from "../screens/CreatePostScreen";
+import NotificationScreen from "../screens/NotificationScreen";
+import ChatScreen from "../screens/ChatScreen";
 
 import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "../utils/firebaseConfig";
@@ -23,16 +26,52 @@ export default function AppNavigator() {
         return unsubscribe;
     }, []);
 
-    if (loading) return null; // or splash screen
+    if (loading) return null;
 
     return (
-        <Stack.Navigator screenOptions={{ headerShown: false }}>
+        <Stack.Navigator
+            screenOptions={{
+                headerShown: false,
+                gestureEnabled: true,
+                fullScreenGestureEnabled: true,
+            }}
+        >
             {user ? (
-                <Stack.Screen name="Home" component={HomeScreen} />
+                <>
+                    <Stack.Screen
+                        name="Home"
+                        component={HomeScreen}
+                    />
+
+                    <Stack.Screen
+                        name="CreatePost"
+                        component={CreatePostScreen}
+                        options={{
+                            animation: "slide_from_right",
+                        }}
+                    />
+                    <Stack.Screen
+                        name="Notification"
+                        component={NotificationScreen}
+                        options={{ animation: "slide_from_left" }}
+                    />
+                    <Stack.Screen
+                        name="Chat"
+                        component={ChatScreen}
+                        options={{ animation: "slide_from_right" }}
+                    />
+                </>
             ) : (
                 <>
-                    <Stack.Screen name="Login" component={LoginScreen} />
-                    <Stack.Screen name="Register" component={RegisterScreen} />
+                    <Stack.Screen
+                        name="Login"
+                        component={LoginScreen}
+                    />
+
+                    <Stack.Screen
+                        name="Register"
+                        component={RegisterScreen}
+                    />
                 </>
             )}
         </Stack.Navigator>

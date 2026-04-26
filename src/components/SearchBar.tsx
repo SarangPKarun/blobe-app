@@ -4,8 +4,8 @@ import {
     TextInput,
     TouchableOpacity,
     StyleSheet,
-    Text,
 } from 'react-native';
+import Icon from 'react-native-vector-icons/Ionicons';
 
 type Props = {
     value: string;
@@ -21,10 +21,17 @@ const SearchBar: React.FC<Props> = ({
     return (
         <View style={styles.container}>
             <View style={styles.searchBox}>
+                <Icon
+                    name="search"
+                    size={20}
+                    color="#8e8e93"
+                    style={styles.leftIcon}
+                />
+
                 <TextInput
                     style={styles.input}
                     placeholder="Search..."
-                    placeholderTextColor="#777"
+                    placeholderTextColor="#8e8e93"
                     value={value}
                     onChangeText={onChangeText}
                 />
@@ -33,7 +40,11 @@ const SearchBar: React.FC<Props> = ({
                     style={styles.iconButton}
                     onPress={onPressSearch}
                 >
-                    <Text style={styles.icon}>🔍</Text>
+                    <Icon
+                        name="arrow-forward-circle"
+                        size={24}
+                        color="#000"
+                    />
                 </TouchableOpacity>
             </View>
         </View>
@@ -46,24 +57,23 @@ const styles = StyleSheet.create({
     container: {
         position: 'absolute',
         top: 50,
-        left: 20,
-        right: 20,
+        left: 18,
+        right: 18,
     },
 
     searchBox: {
+        height: 48,
+        borderRadius: 22,
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#ffffff',
-        borderRadius: 30,
-        paddingHorizontal: 15,
-        height: 55,
+        paddingHorizontal: 16,
 
-        // Shadow
-        elevation: 5,
-        shadowColor: '#000',
-        shadowOpacity: 0.25,
-        shadowRadius: 5,
-        shadowOffset: { width: 0, height: 2 },
+        // Same glass style as bottom bar
+        backgroundColor: 'rgba(255,255,255,0.50)',
+    },
+
+    leftIcon: {
+        marginRight: 10,
     },
 
     input: {
@@ -74,9 +84,5 @@ const styles = StyleSheet.create({
 
     iconButton: {
         marginLeft: 10,
-    },
-
-    icon: {
-        fontSize: 22,
     },
 });
