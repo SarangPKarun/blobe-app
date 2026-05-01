@@ -71,7 +71,7 @@ export default function RegisterScreen({ navigation }: any) {
             setSuccess("Account created 🎉");
 
             setTimeout(() => {
-                navigation.navigate("Login");
+                navigation.goBack();
             }, 1500);
 
         } catch (e: any) {
@@ -145,7 +145,7 @@ export default function RegisterScreen({ navigation }: any) {
                 )}
             </TouchableOpacity>
 
-            <TouchableOpacity onPress={() => navigation.navigate("Login")}>
+            <TouchableOpacity onPress={() => navigation.goBack()}>
                 <Text style={styles.link}>
                     Already have an account?{" "}
                     <Text style={styles.linkBold}>Login</Text>
