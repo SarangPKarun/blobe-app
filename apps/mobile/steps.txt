@@ -1,0 +1,13 @@
+rm -rf node_modules
+rm -rf android/.gradle
+rm -rf android/build
+rm -rf android/app/build
+rm package-lock.json
+
+npm install
+
+npm install react-native-webview
+
+
+cd android && ./gradlew --stop
+rm -rf .gradle build app/build
