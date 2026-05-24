@@ -11,9 +11,11 @@ import {
     Platform
 } from "react-native";
 import { Picker } from "@react-native-picker/picker";
-import { createUserWithEmailAndPassword, updatePassword, signInWithPhoneNumber, ApplicationVerifier } from "firebase/auth";
+import auth from '@react-native-firebase/auth';
+
+
 import { doc, getDoc, setDoc } from "firebase/firestore";
-import { auth, db } from "../utils/firebaseConfig";
+import { db } from "../utils/firebaseConfig";
 import { Colors } from "../theme/colors";
 
 export default function RegisterScreen({ navigation }: any) {
@@ -191,14 +193,14 @@ export default function RegisterScreen({ navigation }: any) {
             let userPhone = inputType === "phone" ? contactInfo : "";
 
             if (inputType === "email") {
-                const userCredential = await createUserWithEmailAndPassword(auth, contactInfo, password);
+                const userCredential = await auth().createUserWithEmailAndPassword(contactInfo, password);
                 uid = userCredential.user.uid;
             } else {
                 // For phone auth, user is already authenticated if confirm() succeeded
                 // Since we are mocking phone OTP, we will create a mock account here
                 // just so it works without the native setup.
                 const mockEmail = `phone_${contactInfo.replace("+", "")}@mock.com`;
-                const userCredential = await createUserWithEmailAndPassword(auth, mockEmail, password);
+                const userCredential = await auth().createUserWithEmailAndPassword(mockEmail, password);
                 uid = userCredential.user.uid;
             }
 
