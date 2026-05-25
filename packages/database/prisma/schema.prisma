@@ -1,0 +1,94 @@
+generator client {
+  provider = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
+}
+
+datasource db {
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  extensions = [postgis()]
+}
+
+model User {
+  id           String         @id @default(uuid())
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  email        String?        @unique
+  phone        String?        @unique
+  posts        Post[]
+  votes        Vote[]
+  trustScore   TrustScore?
+  notifications Notification[]
+  payments     Payment[]
+  messages     ChatMessage[]
+}
+
+model Post {
+  id        String                               @id @default(uuid())
+  createdAt DateTime                             @default(now())
+  updatedAt DateTime                             @updatedAt
+  title     String
+  content   String
+  authorId  String
+  author    User                                 @relation(fields: [authorId], references: [id])
+  location  Unsupported("geometry(Point,4326)")?
+  votes     Vote[]
+
+  @@index([location], type: Gist)
+}
+
+model Banner {
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  imageUrl  String
+  linkUrl   String?
+  isActive  Boolean  @default(true)
+}
+
+model Vote {
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now())
+  userId    String
+  postId    String
+  user      User     @relation(fields: [userId], references: [id])
+  post      Post     @relation(fields: [postId], references: [id])
+  value     Int
+
+  @@unique([userId, postId])
+}
+
+model TrustScore {
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id])
+  score     Float    @default(0.0)
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  content   String
+  isRead    Boolean  @default(false)
+}
+
+model Payment {
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  amount    Float
+  status    String
+}
+
+model ChatMessage {
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  content   String
+}
