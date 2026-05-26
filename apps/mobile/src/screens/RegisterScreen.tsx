@@ -12,11 +12,14 @@ import {
 } from "react-native";
 import { Picker } from "@react-native-picker/picker";
 import auth from '@react-native-firebase/auth';
-
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { doc, getDoc, setDoc } from "firebase/firestore";
 import { db } from "../utils/firebaseConfig";
 import { Colors } from "../theme/colors";
+import { registerFCMToken, requestPushPermission } from "../utils/messaging";
+
+const USER_SERVICE_URL = process.env.USER_SERVICE_URL || 'http://10.0.2.2:3001';
 
 export default function RegisterScreen({ navigation }: any) {
     const [step, setStep] = useState(1);
@@ -218,6 +221,34 @@ export default function RegisterScreen({ navigation }: any) {
             });
 
             await setDoc(usernameRef, { uid });
+
+            // Register user in backend and get internal JWT
+            try {
+                const idToken = await auth().currentUser?.getIdToken();
+                const res = await fetch(`${USER_SERVICE_URL}/users`, {
+                    method: 'POST',
+                    headers: {
+                        Authorization: `Bearer ${idToken}`,
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        username: username.toLowerCase(),
+                        ...(userEmail && { email: userEmail }),
+                        ...(userPhone && { phone: userPhone }),
+                    }),
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    await AsyncStorage.setItem('internal_jwt', data.token);
+                    // Register FCM token after obtaining JWT
+                    const granted = await requestPushPermission();
+                    if (granted) {
+                        await registerFCMToken(data.token);
+                    }
+                }
+            } catch (backendErr) {
+                console.warn('[register] backend registration failed:', backendErr);
+            }
 
             setSuccess("Account created successfully! 🎉");
             setTimeout(() => {

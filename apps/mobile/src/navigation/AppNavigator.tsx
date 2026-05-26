@@ -10,6 +10,10 @@ import ChatScreen from "../screens/ChatScreen";
 
 import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "../utils/firebaseConfig";
+import { setupBackgroundHandler } from "../utils/messaging";
+
+// Must be called at module level — RN Firebase requirement
+setupBackgroundHandler();
 
 const Stack = createNativeStackNavigator();
 

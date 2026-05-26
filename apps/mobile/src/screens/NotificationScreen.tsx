@@ -1,92 +1,160 @@
-import React, { useState } from "react";
-import { View, Image, Text, StyleSheet, FlatList, TouchableOpacity, Alert } from "react-native";
-
+import React, { useState, useEffect, useCallback } from "react";
+import {
+    View,
+    Text,
+    StyleSheet,
+    FlatList,
+    TouchableOpacity,
+    ActivityIndicator,
+    RefreshControl,
+} from "react-native";
 import { Colors } from "../theme/colors";
+import { fetchNotifications, markNotificationRead, markAllRead } from "../api/notifications";
+import { setupForegroundListener } from "../utils/messaging";
 
 type NotificationItem = {
     id: string;
-    name: string;
-    action: string;
-    time: string;
-    image: string;
-    followBack?: boolean;
+    type: string;
+    content: string;
+    isRead: boolean;
+    createdAt: string;
+    actorId?: string;
+    sourceId?: string;
 };
 
-const notifications: NotificationItem[] = [
-    {
-        id: "1",
-        name: "john_doe",
-        action: "started following you.",
-        time: "2m",
-        image: "https://i.pravatar.cc/150?img=1",
-        followBack: true,
-    },
-    {
-        id: "2",
-        name: "emma_watson",
-        action: "liked your photo.",
-        time: "10m",
-        image: "https://i.pravatar.cc/150?img=5",
-    },
-    {
-        id: "3",
-        name: "alex_07",
-        action: "commented: Nice shot 🔥",
-        time: "25m",
-        image: "https://i.pravatar.cc/150?img=8",
-    },
-    {
-        id: "4",
-        name: "michael",
-        action: "mentioned you in a story.",
-        time: "1h",
-        image: "https://i.pravatar.cc/150?img=12",
-    },
-    {
-        id: "5",
-        name: "sophia",
-        action: "started following you.",
-        time: "3h",
-        image: "https://i.pravatar.cc/150?img=15",
-        followBack: true,
-    },
-];
-
-
 export default function NotificationScreen() {
+    const [notifications, setNotifications] = useState<NotificationItem[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [refreshing, setRefreshing] = useState(false);
+    const [hasMore, setHasMore] = useState(false);
+    const [nextCursor, setNextCursor] = useState<string | null>(null);
+    const [loadingMore, setLoadingMore] = useState(false);
+
+    const loadNotifications = useCallback(async (cursor?: string) => {
+        try {
+            const data = await fetchNotifications({ limit: 20, cursor });
+            if (cursor) {
+                setNotifications((prev) => [...prev, ...data.notifications]);
+            } else {
+                setNotifications(data.notifications);
+            }
+            setHasMore(data.hasMore);
+            setNextCursor(data.nextCursor);
+        } catch (err) {
+            console.error('[NotificationScreen] fetch failed:', err);
+        }
+    }, []);
+
+    useEffect(() => {
+        loadNotifications().finally(() => setLoading(false));
+
+        const unsubscribe = setupForegroundListener(({ title, body, data }) => {
+            const newNotif: NotificationItem = {
+                id: data?.notificationId ?? String(Date.now()),
+                type: data?.type ?? 'general',
+                content: body ?? title ?? '',
+                isRead: false,
+                createdAt: new Date().toISOString(),
+                sourceId: data?.postId ?? data?.paymentId,
+                actorId: data?.actorId,
+            };
+            setNotifications((prev) => [newNotif, ...prev]);
+        });
+
+        return unsubscribe;
+    }, [loadNotifications]);
+
+    const onRefresh = async () => {
+        setRefreshing(true);
+        await loadNotifications();
+        setRefreshing(false);
+    };
+
+    const onEndReached = async () => {
+        if (!hasMore || loadingMore || !nextCursor) return;
+        setLoadingMore(true);
+        await loadNotifications(nextCursor);
+        setLoadingMore(false);
+    };
+
+    const handleRead = async (id: string) => {
+        setNotifications((prev) =>
+            prev.map((n) => (n.id === id ? { ...n, isRead: true } : n))
+        );
+        try {
+            await markNotificationRead(id);
+        } catch {
+            setNotifications((prev) =>
+                prev.map((n) => (n.id === id ? { ...n, isRead: false } : n))
+            );
+        }
+    };
+
+    const handleMarkAll = async () => {
+        setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
+        try {
+            await markAllRead();
+        } catch (err) {
+            console.error('[NotificationScreen] markAllRead failed:', err);
+        }
+    };
 
     const renderItem = ({ item }: { item: NotificationItem }) => (
-        <TouchableOpacity style={styles.card}>
-            <Image source={{ uri: item.image }} style={styles.avatar} />
-
+        <TouchableOpacity
+            style={[styles.card, item.isRead && styles.cardRead]}
+            onPress={() => handleRead(item.id)}
+        >
+            <View style={styles.dot}>
+                {!item.isRead && <View style={styles.unreadDot} />}
+            </View>
             <View style={styles.textArea}>
-                <Text style={styles.text}>
-                    <Text style={styles.name}>{item.name} </Text>
-                    {item.action}
-                    <Text style={styles.time}> {item.time}</Text>
+                <Text style={styles.text}>{item.content}</Text>
+                <Text style={styles.time}>
+                    {new Date(item.createdAt).toLocaleTimeString([], {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                    })}
                 </Text>
             </View>
-
-            {item.followBack && (
-                <TouchableOpacity style={styles.button}>
-                    <Text style={styles.buttonText}>Follow</Text>
-                </TouchableOpacity>
-            )}
         </TouchableOpacity>
     );
 
+    if (loading) {
+        return (
+            <View style={styles.center}>
+                <ActivityIndicator color={Colors.primary} />
+            </View>
+        );
+    }
 
     return (
         <View style={styles.container}>
+            <View style={styles.headerRow}>
+                <Text style={styles.header}>Notifications</Text>
+                <TouchableOpacity onPress={handleMarkAll}>
+                    <Text style={styles.markAll}>Mark all read</Text>
+                </TouchableOpacity>
+            </View>
 
-            <Text style={styles.header}>Notifications</Text>
             <FlatList
                 data={notifications}
                 keyExtractor={(item) => item.id}
                 renderItem={renderItem}
                 showsVerticalScrollIndicator={false}
+                onEndReached={onEndReached}
+                onEndReachedThreshold={0.3}
+                refreshControl={
+                    <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+                }
+                ListEmptyComponent={
+                    <Text style={styles.empty}>No notifications yet</Text>
+                }
+                ListFooterComponent={
+                    loadingMore ? (
+                        <ActivityIndicator style={styles.footer} color={Colors.primary} />
+                    ) : null
+                }
             />
-
         </View>
     );
 }
@@ -95,121 +163,72 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: Colors.backgroundSoft,
+        paddingTop: 24,
+        paddingHorizontal: 16,
+    },
+    center: {
+        flex: 1,
         justifyContent: "center",
-        padding: 24,
-    },
-
-    title: {
-        fontSize: 28,
-        fontWeight: "bold",
-        color: Colors.primary,
-        marginBottom: 8,
-    },
-
-    subtitle: {
-        fontSize: 16,
-        color: Colors.textSecondary,
-        marginBottom: 20,
-    },
-
-    /* ✅ ERROR BOX STYLE */
-    errorBox: {
-        backgroundColor: "#ff4d4d20",
-        borderColor: "#ff4d4d",
-        borderWidth: 1,
-        padding: 10,
-        borderRadius: 8,
-        marginBottom: 15,
-    },
-
-    errorText: {
-        color: "#ff4d4d",
-        fontSize: 14,
-    },
-
-    input: {
-        backgroundColor: Colors.background,
-        padding: 14,
-        borderRadius: 10,
-        marginBottom: 15,
-        borderWidth: 1,
-        borderColor: Colors.border,
-        color: Colors.textPrimary,
-    },
-
-    inputError: {
-        borderColor: "#ff4d4d",
-    },
-
-    button: {
-        backgroundColor: Colors.primary,
-        padding: 15,
-        borderRadius: 10,
         alignItems: "center",
-        marginTop: 10,
+        backgroundColor: Colors.backgroundSoft,
     },
-
-    buttonText: {
-        color: Colors.textOnDark,
-        fontWeight: "bold",
-        fontSize: 16,
+    headerRow: {
+        flexDirection: "row",
+        justifyContent: "space-between",
+        alignItems: "center",
+        marginBottom: 16,
     },
-
-    eye: {
-        position: "absolute",
-        right: 15,
-        top: 15,
-    },
-
-    link: {
-        textAlign: "center",
-        marginTop: 20,
-        color: Colors.textSecondary,
-    },
-
-    linkBold: {
-        color: Colors.accent,
-        fontWeight: "bold",
-    },
-
     header: {
         fontSize: 26,
         fontWeight: "bold",
-        marginBottom: 20,
+        color: "#111",
     },
-
+    markAll: {
+        fontSize: 13,
+        color: Colors.accent,
+        fontWeight: "600",
+    },
     card: {
         flexDirection: "row",
         alignItems: "center",
-        paddingVertical: 12,
+        paddingVertical: 14,
         borderBottomWidth: 0.5,
         borderBottomColor: "#eee",
     },
-
-    avatar: {
-        width: 52,
-        height: 52,
-        borderRadius: 26,
+    cardRead: {
+        opacity: 0.6,
     },
-
+    dot: {
+        width: 12,
+        alignItems: "center",
+        marginRight: 10,
+    },
+    unreadDot: {
+        width: 8,
+        height: 8,
+        borderRadius: 4,
+        backgroundColor: Colors.primary,
+    },
     textArea: {
         flex: 1,
-        marginLeft: 12,
-        paddingRight: 10,
     },
-
     text: {
         fontSize: 14,
         color: "#222",
         lineHeight: 20,
     },
-
-    name: {
-        fontWeight: "bold",
-    },
-
     time: {
+        marginTop: 2,
+        fontSize: 12,
         color: "gray",
-        fontSize: 13,
+    },
+    empty: {
+        textAlign: "center",
+        marginTop: 60,
+        color: Colors.textSecondary,
+        fontSize: 15,
+    },
+    footer: {
+        marginVertical: 16,
     },
 });
