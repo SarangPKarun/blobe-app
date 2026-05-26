@@ -5,7 +5,6 @@ generator client {
 
 datasource db {
   provider   = "postgresql"
-  url        = env("DATABASE_URL")
   extensions = [postgis()]
 }
 
@@ -15,12 +14,27 @@ model User {
   updatedAt    DateTime       @updatedAt
   email        String?        @unique
   phone        String?        @unique
+  username     String?        @unique
   posts        Post[]
   votes        Vote[]
   trustScore   TrustScore?
   notifications Notification[]
   payments     Payment[]
   messages     ChatMessage[]
+  followers    Follows[]      @relation("Following")
+  following    Follows[]      @relation("Follower")
+}
+
+model Follows {
+  followerId  String
+  followingId String
+  follower    User     @relation("Follower", fields: [followerId], references: [id])
+  following   User     @relation("Following", fields: [followingId], references: [id])
+  createdAt   DateTime @default(now())
+
+  @@id([followerId, followingId])
+  @@index([followerId])
+  @@index([followingId])
 }
 
 model Post {
@@ -28,10 +42,13 @@ model Post {
   createdAt DateTime                             @default(now())
   updatedAt DateTime                             @updatedAt
   title     String
-  content   String
+  content   String?
   authorId  String
   author    User                                 @relation(fields: [authorId], references: [id])
   location  Unsupported("geometry(Point,4326)")?
+  frontText String?
+  backText  String?
+  mediaUrl  String?
   votes     Vote[]
 
   @@index([location], type: Gist)
