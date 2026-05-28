@@ -91,6 +91,25 @@ services:
               key_claim_name: iss
               claims_to_verify: []
 
+  # -- Globe Service ---------------------------------------------------------
+  - name: globe-service
+    url: http://host.docker.internal:3004
+    routes:
+      - name: globe-banners
+        paths: [/banners]
+        methods: [GET]
+        strip_path: false
+        plugins:
+          - name: jwt
+            config:
+              key_claim_name: iss
+              claims_to_verify: []
+      - name: globe-ws
+        paths: [/ws]
+        methods: [GET]
+        strip_path: false
+        # JWT validated in-service via ?token= query param; no Kong plugin here.
+
 # ---------------------------------------------------------------------------
 # Global Plugins
 # ---------------------------------------------------------------------------

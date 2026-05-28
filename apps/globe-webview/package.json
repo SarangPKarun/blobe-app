@@ -1,0 +1,22 @@
+{
+  "name": "@blobe/globe-webview",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "build": "vite build",
+    "build:android": "vite build && node scripts/copy-to-android.mjs",
+    "dev": "vite"
+  },
+  "dependencies": {
+    "@blobe/shared-types": "*"
+  },
+  "devDependencies": {
+    "three": "^0.168.0",
+    "@types/three": "^0.168.0",
+    "ngeohash": "^0.6.3",
+    "@types/ngeohash": "^0.6.5",
+    "vite": "^5.4.21",
+    "vite-plugin-singlefile": "^2.0.0",
+    "typescript": "^5.8.3"
+  }
+}

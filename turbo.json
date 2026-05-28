@@ -5,6 +5,14 @@
       "dependsOn": ["^build"],
       "outputs": ["dist/**", "build/**", ".next/**", "out/**"]
     },
+    "build:android": {
+      "dependsOn": ["build"],
+      "outputs": ["dist/**"]
+    },
+    "@blobe/mobile#build": {
+      "dependsOn": ["@blobe/globe-webview#build:android"],
+      "outputs": ["android/app/src/main/assets/globe/globe.html"]
+    },
     "test": {
       "dependsOn": ["build"],
       "outputs": ["coverage/**"],
