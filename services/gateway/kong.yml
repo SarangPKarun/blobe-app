@@ -1,0 +1,150 @@
+_format_version: "3.0"
+_transform: true
+
+# ---------------------------------------------------------------------------
+# Consumers & JWT credentials
+# ---------------------------------------------------------------------------
+consumers:
+  - username: blobe-app
+
+jwt_secrets:
+  - consumer: blobe-app
+    key: blobe-app
+    algorithm: HS256
+    # Must match JWT_SECRET used by user-service (dev default).
+    # Production: generate via  envsubst < kong.yml.template > kong.yml
+    secret: "super-secret-default-key-for-dev"
+
+# ---------------------------------------------------------------------------
+# Services & Routes
+# ---------------------------------------------------------------------------
+services:
+
+  # -- User Service ----------------------------------------------------------
+  - name: user-service
+    url: http://host.docker.internal:3001
+    routes:
+
+      # Public: username availability check
+      - name: user-check-username
+        methods: [GET]
+        paths: [/users/check-username]
+        strip_path: false
+
+      # Public: registration (Firebase ID token verified by the service itself)
+      - name: user-register
+        methods: [POST]
+        paths: [/users]
+        strip_path: false
+
+      # Protected: all other /users/** routes
+      - name: user-protected
+        paths: [/users]
+        strip_path: false
+        plugins:
+          - name: jwt
+            config:
+              key_claim_name: iss
+              claims_to_verify: []
+
+  # -- Post Service ----------------------------------------------------------
+  - name: post-service
+    url: http://host.docker.internal:3002
+    routes:
+      - name: post-routes
+        paths: [/posts]
+        strip_path: false
+        plugins:
+          - name: jwt
+            config:
+              key_claim_name: iss
+              claims_to_verify: []
+
+  # -- Notification Service: notification-prefs (more specific, must be ----
+  # -- declared before the /users prefix route in user-service) --------------
+  - name: notification-prefs-service
+    url: http://host.docker.internal:3003
+    routes:
+      - name: notification-prefs-routes
+        # Regex routes win over prefix routes regardless of service order
+        paths:
+          - ~/users/[^/]+/preferences$
+          - ~/users/[^/]+/notification-prefs$
+        regex_priority: 10
+        strip_path: false
+        plugins:
+          - name: jwt
+            config:
+              key_claim_name: iss
+              claims_to_verify: []
+
+  # -- Notification Service: notifications & device-tokens ------------------
+  - name: notification-service
+    url: http://host.docker.internal:3003
+    routes:
+      - name: notification-routes
+        paths: [/notifications, /device-tokens]
+        strip_path: false
+        plugins:
+          - name: jwt
+            config:
+              key_claim_name: iss
+              claims_to_verify: []
+
+# ---------------------------------------------------------------------------
+# Global Plugins
+# ---------------------------------------------------------------------------
+plugins:
+
+  # Request ID header for distributed tracing
+  - name: correlation-id
+    config:
+      header_name: X-Request-ID
+      generator: uuid
+      echo_downstream: true
+
+  # CORS — open for all origins in dev; tighten per-route in production
+  - name: cors
+    config:
+      origins:
+        - "*"
+      methods:
+        - GET
+        - POST
+        - PATCH
+        - DELETE
+        - OPTIONS
+        - HEAD
+      headers:
+        - Authorization
+        - Content-Type
+        - X-Request-ID
+      exposed_headers:
+        - X-Request-ID
+      preflight_continue: false
+      max_age: 3600
+
+  # Rate limiting by IP — 100 req/min
+  - name: rate-limiting
+    config:
+      minute: 100
+      policy: redis
+      redis_host: redis
+      redis_port: 6379
+      limit_by: ip
+      error_code: 429
+      error_message: "Rate limit exceeded"
+      hide_client_headers: false
+
+  # Rate limiting by authenticated consumer — 60 req/min
+  - name: rate-limiting
+    instance_name: rate-limiting-consumer
+    config:
+      minute: 60
+      policy: redis
+      redis_host: redis
+      redis_port: 6379
+      limit_by: consumer
+      error_code: 429
+      error_message: "Rate limit exceeded"
+      hide_client_headers: false

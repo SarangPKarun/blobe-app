@@ -14,12 +14,10 @@ import { Picker } from "@react-native-picker/picker";
 import auth from '@react-native-firebase/auth';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-import { doc, getDoc, setDoc } from "firebase/firestore";
-import { db } from "../utils/firebaseConfig";
 import { Colors } from "../theme/colors";
 import { registerFCMToken, requestPushPermission } from "../utils/messaging";
 
-const USER_SERVICE_URL = process.env.USER_SERVICE_URL || 'http://10.0.2.2:3001';
+const API_GATEWAY_URL = process.env.API_GATEWAY_URL || 'http://10.0.2.2:8000';
 
 export default function RegisterScreen({ navigation }: any) {
     const [step, setStep] = useState(1);
@@ -183,49 +181,29 @@ export default function RegisterScreen({ navigation }: any) {
 
         setLoading(true);
         try {
-            // Check username uniqueness
-            const usernameRef = doc(db, "usernames", username.toLowerCase());
-            const usernameSnap = await getDoc(usernameRef);
+            // Check username uniqueness via gateway → user-service
+            const checkRes = await fetch(`${API_GATEWAY_URL}/users/check-username?username=${encodeURIComponent(username.toLowerCase())}`);
+            if (!checkRes.ok) throw new Error('Failed to check username');
+            const { available } = await checkRes.json();
+            if (!available) throw new Error('Username is already taken');
 
-            if (usernameSnap.exists()) {
-                throw new Error("Username is already taken");
-            }
-
-            let uid = "";
             let userEmail = inputType === "email" ? contactInfo : "";
             let userPhone = inputType === "phone" ? contactInfo : "";
 
             if (inputType === "email") {
-                const userCredential = await auth().createUserWithEmailAndPassword(contactInfo, password);
-                uid = userCredential.user.uid;
+                await auth().createUserWithEmailAndPassword(contactInfo, password);
             } else {
                 // For phone auth, user is already authenticated if confirm() succeeded
                 // Since we are mocking phone OTP, we will create a mock account here
                 // just so it works without the native setup.
                 const mockEmail = `phone_${contactInfo.replace("+", "")}@mock.com`;
-                const userCredential = await auth().createUserWithEmailAndPassword(mockEmail, password);
-                uid = userCredential.user.uid;
+                await auth().createUserWithEmailAndPassword(mockEmail, password);
             }
-
-            // Save to Firestore
-            const dob = { day: parseInt(dobDay), month: parseInt(dobMonth), year: parseInt(dobYear) };
-
-            await setDoc(doc(db, "users", uid), {
-                firstName,
-                lastName,
-                username: username.toLowerCase(),
-                dob,
-                email: userEmail,
-                phone: userPhone,
-                createdAt: new Date().toISOString()
-            });
-
-            await setDoc(usernameRef, { uid });
 
             // Register user in backend and get internal JWT
             try {
                 const idToken = await auth().currentUser?.getIdToken();
-                const res = await fetch(`${USER_SERVICE_URL}/users`, {
+                const res = await fetch(`${API_GATEWAY_URL}/users`, {
                     method: 'POST',
                     headers: {
                         Authorization: `Bearer ${idToken}`,

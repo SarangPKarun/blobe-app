@@ -70,12 +70,11 @@ export default async function (fastify: FastifyInstance) {
       // Publish event
       await publishUserCreated(newUser);
 
-      // Issue internal JWT
-      const token = fastify.jwt.sign({
-        id: newUser.id,
-        email: newUser.email || undefined,
-        phone: newUser.phone || undefined,
-      });
+      // Issue internal JWT — iss claim lets Kong identify the consumer
+      const token = fastify.jwt.sign(
+        { id: newUser.id, email: newUser.email || undefined, phone: newUser.phone || undefined },
+        { issuer: 'blobe-app' }
+      );
 
       return reply.code(201).send({ user: newUser, token });
     }

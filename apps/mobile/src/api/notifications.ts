@@ -1,7 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
 
-const BASE_URL = process.env.NOTIFICATION_SERVICE_URL || 'http://10.0.2.2:3003';
+const BASE_URL = process.env.API_GATEWAY_URL || 'http://10.0.2.2:8000';
 
 async function authHeaders(): Promise<Record<string, string>> {
   const token = await AsyncStorage.getItem('internal_jwt');
