@@ -4,7 +4,6 @@ import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import LoginScreen from "../screens/LoginScreen";
 import RegisterScreen from "../screens/RegisterScreen";
 import HomeScreen from "../screens/HomeScreen";
-import CreatePostScreen from "../screens/CreatePostScreen";
 import NotificationScreen from "../screens/NotificationScreen";
 import ChatScreen from "../screens/ChatScreen";
 
@@ -47,13 +46,6 @@ export default function AppNavigator() {
                         component={HomeScreen}
                     />
 
-                    <Stack.Screen
-                        name="CreatePost"
-                        component={CreatePostScreen}
-                        options={{
-                            animation: "slide_from_right",
-                        }}
-                    />
                     <Stack.Screen
                         name="Notification"
                         component={NotificationScreen}

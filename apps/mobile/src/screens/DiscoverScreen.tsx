@@ -1,18 +1,21 @@
 import React from "react";
 import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
-import { useNavigation } from "@react-navigation/native";
 
 import { Colors } from "../theme/colors";
 import Icon from "react-native-vector-icons/Ionicons";
 
-export default function DiscoverScreen() {
-    const navigation: any = useNavigation();
+type TabId = 'globe' | 'discover' | 'create' | 'notifications' | 'profile';
 
+interface Props {
+    setActiveTab?: (tab: TabId) => void;
+}
+
+export default function DiscoverScreen({ setActiveTab }: Props) {
     return (
         <View style={styles.container}>
             <TouchableOpacity
                 style={styles.createPostButton}
-                onPress={() => navigation.navigate("CreatePost")}
+                onPress={() => setActiveTab?.('create')}
             >
                 <Icon name="add" size={28} color="#fff" />
             </TouchableOpacity>

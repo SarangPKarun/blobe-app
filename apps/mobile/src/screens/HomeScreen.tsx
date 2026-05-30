@@ -1,98 +1,105 @@
-import React, { useState } from "react";
-import { View, Text, StyleSheet, TouchableOpacity, Alert } from "react-native";
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import {
+  Animated,
+  Dimensions,
+  StyleSheet,
+  View,
+} from 'react-native';
 
-import BottomBar from "../components/BottomBar";
-import NotificationScreen from "./NotificationScreen";
-import GlobeScreen, { GlobeScreenHandle } from './GlobeScreen';
-import DiscoverScreen from "./DiscoverScreen";
-
-import ProfileScreen from "./ProfileScreen";
-import CreatePostScreen from "./CreatePostScreen";
-
+import BottomBar from '../components/BottomBar';
 import LocationButton from '../components/LocationButton';
+import SearchBar from '../components/SearchBar';
+import { useGlobe } from '../context/GlobeContext';
 import { handleLocationPress } from '../utils/locationHandler';
-import SearchBar from "../components/SearchBar";
-import { useRef } from 'react';
 
+import DiscoverScreen from './DiscoverScreen';
+import NotificationScreen from './NotificationScreen';
+import ProfileScreen from './ProfileScreen';
+import CreatePostScreen from './CreatePostScreen';
 
+const SCREEN_HEIGHT = Dimensions.get('window').height;
+const OVERLAY_HEIGHT = SCREEN_HEIGHT * 0.85;
+
+type TabId = 'globe' | 'discover' | 'create' | 'notifications' | 'profile';
 
 export default function HomeScreen() {
-    const globeRef = useRef<GlobeScreenHandle>(null);
+  const globe = useGlobe();
+  const [activeTab, setActiveTab] = useState<TabId>('globe');
+  const [search, setSearch] = useState('');
+  const slideAnim = useRef(new Animated.Value(0)).current;
 
-    const [activeTab, setActiveTab] = useState("globe");
-    const [search, setSearch] = useState('');
+  const overlayOpen = activeTab !== 'globe';
 
-    const renderContent = () => {
-        switch (activeTab) {
-            case "discover":
-                return <DiscoverScreen />;
+  useEffect(() => {
+    Animated.spring(slideAnim, {
+      toValue: overlayOpen ? 1 : 0,
+      useNativeDriver: true,
+      tension: 65,
+      friction: 11,
+    }).start();
+  }, [overlayOpen, slideAnim]);
 
-            case "globe":
-                return <GlobeScreen ref={globeRef} />;
+  const translateY = slideAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [OVERLAY_HEIGHT, 0],
+  });
 
-            case "create":
-                return <CreatePostScreen />;
+  const onLocationPress = useCallback(() => {
+    handleLocationPress((lat, lng) => globe.sendLocation(lat, lng));
+  }, [globe]);
 
-            case "notifications":
-                return <NotificationScreen />;
+  const renderOverlayContent = () => {
+    switch (activeTab) {
+      case 'discover':
+        return <DiscoverScreen setActiveTab={setActiveTab} />;
+      case 'create':
+        return <CreatePostScreen setActiveTab={setActiveTab} />;
+      case 'notifications':
+        return <NotificationScreen />;
+      case 'profile':
+        return <ProfileScreen />;
+      default:
+        return null;
+    }
+  };
 
-            case "profile":
-                return <ProfileScreen />;
-        }
-    };
+  return (
+    <View style={styles.container}>
+      {/* Globe controls — sit above the persistent globe, below the overlay */}
+      {!overlayOpen && (
+        <LocationButton onPress={onLocationPress} />
+      )}
+      {!overlayOpen && (
+        <SearchBar
+          value={search}
+          onChangeText={setSearch}
+          onPressSearch={() => console.log(search)}
+        />
+      )}
 
-    const onLocationPress = () => {
-        handleLocationPress((lat, lng) => {
-            globeRef.current?.sendLocation(lat, lng);
-        });
-    };
+      {/* Sliding overlay — translates in from the bottom */}
+      <Animated.View
+        style={[styles.overlay, { transform: [{ translateY }] }]}
+        pointerEvents={overlayOpen ? 'auto' : 'none'}
+      >
+        {renderOverlayContent()}
+      </Animated.View>
 
-
-    return (
-        <View style={styles.container}>
-            {renderContent()}
-
-            {/* Floating Button */}
-            {activeTab === "globe" && (
-                <LocationButton onPress={onLocationPress} />
-            )}
-
-            {activeTab === "globe" && (
-                <SearchBar
-                    value={search}
-                    onChangeText={setSearch}
-                    onPressSearch={() => console.log(search)}
-                />
-            )}
-
-            <BottomBar activeTab={activeTab} setActiveTab={setActiveTab} />
-        </View>
-    );
+      <BottomBar activeTab={activeTab} setActiveTab={setActiveTab} />
+    </View>
+  );
 }
 
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-    },
-
-    logoutButton: {
-        position: "absolute",
-        top: 50,
-        right: 20,
-        backgroundColor: "#ff4d4d",
-        paddingVertical: 8,
-        paddingHorizontal: 12,
-        borderRadius: 8,
-        zIndex: 10,
-    },
-    logoutText: {
-        color: "white",
-        fontWeight: "bold",
-    },
-    content: {
-        flex: 1,
-        paddingBottom: 80,
-        justifyContent: "center",
-        alignItems: "center",
-    },
+  container: {
+    flex: 1,
+  },
+  overlay: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: OVERLAY_HEIGHT,
+    zIndex: 5,
+  },
 });
