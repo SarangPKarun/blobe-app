@@ -114,6 +114,26 @@ services:
         echo 'Bucket blobe-media ready'
       "
 
+  trust-service:
+    build: ./services/trust-service
+    container_name: blobe_trust_service
+    env_file: ./services/trust-service/.env.example
+    environment:
+      DATABASE_URL: postgresql+asyncpg://postgres:postgrespassword@postgres:5432/blobe
+      KAFKA_BROKER: kafka:29092
+    ports:
+      - "3006:3006"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3006/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   kong:
     image: kong:3.4
     container_name: blobe_kong
