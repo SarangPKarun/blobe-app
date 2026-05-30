@@ -13,3 +13,7 @@ export const POST_SERVICE_URL = __DEV__
 export const GLOBE_WS_URL = __DEV__
   ? `ws://${LOCAL_HOST}:3004/ws`
   : 'wss://globe.blobe.app/ws';
+
+export const SEARCH_SERVICE_URL = __DEV__
+  ? `http://${LOCAL_HOST}:3005`
+  : 'https://search.blobe.app';

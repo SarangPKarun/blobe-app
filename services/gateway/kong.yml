@@ -91,6 +91,38 @@ services:
               key_claim_name: iss
               claims_to_verify: []
 
+  # -- Search Service --------------------------------------------------------
+  - name: search-service
+    url: http://host.docker.internal:3005
+    routes:
+      - name: search-weights
+        paths: [/search/weights]
+        methods: [POST]
+        strip_path: false
+        plugins:
+          - name: jwt
+            config:
+              key_claim_name: iss
+              claims_to_verify: []
+      - name: search-suggest
+        paths: [/search/suggest]
+        methods: [GET]
+        strip_path: false
+        plugins:
+          - name: jwt
+            config:
+              key_claim_name: iss
+              claims_to_verify: []
+      - name: search-trending
+        paths: [/search/trending]
+        methods: [GET]
+        strip_path: false
+        plugins:
+          - name: jwt
+            config:
+              key_claim_name: iss
+              claims_to_verify: []
+
   # -- Globe Service ---------------------------------------------------------
   - name: globe-service
     url: http://host.docker.internal:3004

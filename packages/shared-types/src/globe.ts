@@ -23,12 +23,9 @@ export interface CameraState {
   roll?: number;
 }
 
-export interface SearchWeights {
-  relevance: number;
-  recency: number;
-  popularity: number;
-  proximity?: number;
-}
+// Per-banner relevance scores returned by POST /search/weights.
+// Keys are banner (post) IDs; values are normalised scores in [0, 1].
+export type SearchWeights = Record<string, number>;
 
 export interface Region {
   minLatitude: number;
