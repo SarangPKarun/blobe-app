@@ -17,16 +17,17 @@ _consumer_task: asyncio.Task | None = None
 async def _run_consumer() -> None:
     consumer = AIOKafkaConsumer(
         "trust-votes",
+        "moderation",
         bootstrap_servers=settings.kafka_broker,
         group_id="trust-service-group",
         auto_offset_reset="latest",
         value_deserializer=lambda v: json.loads(v.decode()),
     )
     await consumer.start()
-    logger.info("Kafka consumer started on trust-votes")
+    logger.info("Kafka consumer started on trust-votes, moderation")
     try:
         async for msg in consumer:
-            await _handle_message(msg.value)
+            await _handle_message(msg.topic, msg.value)
     except asyncio.CancelledError:
         pass
     finally:
@@ -34,9 +35,16 @@ async def _run_consumer() -> None:
         logger.info("Kafka consumer stopped")
 
 
-async def _handle_message(raw: dict) -> None:
+async def _handle_message(topic: str, raw: dict) -> None:
     # Handle both KafkaEvent-wrapped and raw payloads
     payload: dict = raw.get("payload", raw)
+    if topic == "trust-votes":
+        await _handle_vote(payload)
+    elif topic == "moderation":
+        await _handle_moderation(payload)
+
+
+async def _handle_vote(payload: dict) -> None:
     try:
         async with SessionLocal() as db:
             entry = TrustAuditLog(
@@ -50,6 +58,25 @@ async def _handle_message(raw: dict) -> None:
             await db.commit()
     except Exception:
         logger.exception("Failed to write audit log for trust-votes message")
+
+
+async def _handle_moderation(payload: dict) -> None:
+    try:
+        async with SessionLocal() as db:
+            entry = TrustAuditLog(
+                eventType="MODERATION_APPLIED",
+                subjectUserId=payload.get("authorId"),
+                postId=payload.get("postId"),
+                metadata_={
+                    "moderationId": payload.get("id"),
+                    "decision": payload.get("decision"),
+                    "reason": payload.get("reason"),
+                },
+            )
+            db.add(entry)
+            await db.commit()
+    except Exception:
+        logger.exception("Failed to write audit log for moderation message")
 
 
 async def start_consumer() -> None:

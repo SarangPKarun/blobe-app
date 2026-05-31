@@ -166,6 +166,19 @@ services:
               key_claim_name: iss
               claims_to_verify: []
 
+  # -- Moderation Service ----------------------------------------------------
+  - name: moderation-service
+    url: http://host.docker.internal:3007
+    routes:
+      - name: moderation-queue
+        paths: [/queue]
+        strip_path: false
+        plugins:
+          - name: jwt
+            config:
+              key_claim_name: iss
+              claims_to_verify: []
+
 # ---------------------------------------------------------------------------
 # Global Plugins
 # ---------------------------------------------------------------------------
