@@ -21,7 +21,11 @@ model User {
   notifications          Notification[]
   notificationPreference NotificationPreference?
   deviceTokens           DeviceToken[]
-  payments               Payment[]
+  sentPayments           Payment[]      @relation("SentPayments")
+  receivedPayments       Payment[]      @relation("ReceivedPayments")
+  stripeAccount          StripeAccount?
+  campaigns              Campaign[]
+  adBids                 AdBid[]
   messages     ChatMessage[]
   followers    Follows[]      @relation("Following")
   following    Follows[]      @relation("Follower")
@@ -57,12 +61,15 @@ model Post {
 }
 
 model Banner {
-  id        String   @id @default(uuid())
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id        String    @id @default(uuid())
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
   imageUrl  String
   linkUrl   String?
-  isActive  Boolean  @default(true)
+  isActive  Boolean   @default(true)
+  activeFrom DateTime?
+  activeTo   DateTime?
+  ownerId    String?
 }
 
 model Vote {
@@ -126,12 +133,75 @@ model DeviceToken {
 }
 
 model Payment {
-  id        String   @id @default(uuid())
-  createdAt DateTime @default(now())
-  userId    String
-  user      User     @relation(fields: [userId], references: [id])
-  amount    Float
-  status    String
+  id                    String    @id @default(uuid())
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+  senderId              String
+  recipientId           String
+  sender                User      @relation("SentPayments",     fields: [senderId],    references: [id])
+  recipient             User      @relation("ReceivedPayments", fields: [recipientId], references: [id])
+  amount                Int
+  currency              String    @default("usd")
+  status                String    @default("pending")
+  type                  String
+  stripePaymentIntentId String?
+  stripeTransferId      String?
+  campaignId            String?
+  campaign              Campaign? @relation(fields: [campaignId], references: [id])
+
+  @@index([senderId])
+  @@index([recipientId])
+  @@index([status])
+}
+
+model StripeAccount {
+  id               String   @id @default(uuid())
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  userId           String   @unique
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  stripeAccountId  String   @unique
+  chargesEnabled   Boolean  @default(false)
+  payoutsEnabled   Boolean  @default(false)
+  detailsSubmitted Boolean  @default(false)
+}
+
+model Campaign {
+  id           String    @id @default(uuid())
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  creatorId    String
+  creator      User      @relation(fields: [creatorId], references: [id])
+  title        String
+  description  String?
+  goalAmount   Int
+  raisedAmount Int       @default(0)
+  status       String    @default("active")
+  dueDate      DateTime?
+  payments     Payment[]
+
+  @@index([creatorId])
+  @@index([status])
+}
+
+model AdBid {
+  id                    String   @id @default(uuid())
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+  userId                String
+  user                  User     @relation(fields: [userId], references: [id])
+  amount                Int
+  startTime             DateTime
+  endTime               DateTime
+  imageUrl              String
+  linkUrl               String?
+  status                String   @default("pending")
+  stripePaymentIntentId String?
+  bannerId              String?
+
+  @@index([userId])
+  @@index([status])
+  @@index([startTime, endTime])
 }
 
 model ChatMessage {

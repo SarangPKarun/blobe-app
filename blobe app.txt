@@ -1,0 +1,30 @@
+blobe app:
+
+
+notification-service — push & in-app
+
+One remaining manual step before running: make up && make seed to apply the Prisma schema changes to the database. For iOS, also download GoogleService-Info.plist from Firebase Console and run pod install.
+
+
+
+
+
+API gateway — Kong + auth middleware
+
+
+Removed Firestore imports (doc, getDoc, setDoc, db)
+USER_SERVICE_URL → API_GATEWAY_URL (port 8000)
+Firestore username check → GET /users/check-username via gateway
+Removed redundant setDoc writes to Firestore users/ and usernames/ collections (user-service already persists to PostgreSQL)
+Cleaned up the now-unused uid variable
+apps/mobile/.env.example (new) — Documents API_GATEWAY_URL=http://10.0.2.2:8000
+
+To bring up the gateway: docker compose up kong
+
+
+
+
+
+apps/globe-webview — Three.js package
+
+Build output: npm run build:android in apps/globe-webview produces a ~592 KB self-contained globe.html (no CDN dependencies) and copies it directly to the Android assets folder.

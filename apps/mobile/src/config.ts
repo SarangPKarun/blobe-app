@@ -17,3 +17,7 @@ export const GLOBE_WS_URL = __DEV__
 export const SEARCH_SERVICE_URL = __DEV__
   ? `http://${LOCAL_HOST}:3005`
   : 'https://search.blobe.app';
+
+export const PAYMENT_SERVICE_URL = __DEV__
+  ? `http://${LOCAL_HOST}:3008`
+  : 'https://payments.blobe.app';

@@ -166,6 +166,26 @@ services:
               key_claim_name: iss
               claims_to_verify: []
 
+  # -- Payment Service -------------------------------------------------------
+  - name: payment-service
+    url: http://host.docker.internal:3008
+    routes:
+      # Public: Stripe webhook (no JWT — Stripe signs requests with STRIPE_WEBHOOK_SECRET)
+      - name: stripe-webhook
+        paths: [/stripe/webhook]
+        methods: [POST]
+        strip_path: false
+
+      # Protected: all payment, connect, campaign, earnings routes
+      - name: payment-protected
+        paths: [/connect, /donations, /campaigns, /ads, /users]
+        strip_path: false
+        plugins:
+          - name: jwt
+            config:
+              key_claim_name: iss
+              claims_to_verify: []
+
   # -- Moderation Service ----------------------------------------------------
   - name: moderation-service
     url: http://host.docker.internal:3007
