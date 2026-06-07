@@ -28,3 +28,30 @@ To bring up the gateway: docker compose up kong
 apps/globe-webview — Three.js package
 
 Build output: npm run build:android in apps/globe-webview produces a ~592 KB self-contained globe.html (no CDN dependencies) and copies it directly to the Android assets folder.
+
+
+
+
+payment-service — Stripe Connect
+
+ Verification
+npm run dev from services/payment-service → GET /health returns { status: 'ok' }
+Stripe CLI: stripe listen --forward-to localhost:3008/stripe/webhook for local webhook testing
+POST /connect/onboard with a valid JWT → returns Stripe onboarding URL
+POST /campaigns + POST /donations → returns clientSecret; confirm via stripe.paymentIntents.confirm in test mode → check Campaign raisedAmount incremented
+Scheduler: manually set a Campaign to funded + check 60s later for paid_out status and Kafka message in notification-service logs
+POST /ads/bids with two competing bids → lower bid returns 409; webhook confirm on winner → Banner isActive: true
+GET /users/:id/earnings → returns aggregated payment history
+
+
+
+chat-service + mobile ChatScreen
+
+
+Verification
+Schema: psql → \dt confirms Conversation, ConversationParticipant, ChatMessage, UserPublicKey tables.
+chat-service REST: GET http://localhost:3009/health → { status: 'ok' }.
+Socket.io: Connect via Postman WebSocket with auth: { token }, emit message:send, confirm message:new broadcasts back.
+E2E encryption: Log encryptedContent server-side — should be opaque Base64; only the RN client can decrypt to plaintext.
+Push on background: Background the app, send a message from another account → push notification arrives with type: new_message and conversationId.
+Mobile: Tap a conversation in ChatScreen → ConversationScreen loads history → send a message → appears in both clients.

@@ -186,6 +186,25 @@ services:
               key_claim_name: iss
               claims_to_verify: []
 
+  # -- Chat Service ----------------------------------------------------------
+  - name: chat-service
+    url: http://host.docker.internal:3009
+    routes:
+      # Socket.io handshake — auth handled in-service via socket.handshake.auth.token
+      - name: chat-socketio
+        paths: [/socket.io]
+        strip_path: false
+
+      # Protected REST routes
+      - name: chat-rest
+        paths: [/conversations, /keys]
+        strip_path: false
+        plugins:
+          - name: jwt
+            config:
+              key_claim_name: iss
+              claims_to_verify: []
+
   # -- Moderation Service ----------------------------------------------------
   - name: moderation-service
     url: http://host.docker.internal:3007

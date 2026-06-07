@@ -1,7 +1,10 @@
-import { PostCreatedPayload, TrustVoteCreatedPayload, PaymentCreatedPayload } from '@blobe/shared-types';
+import { PostCreatedPayload, TrustVoteCreatedPayload, PaymentCreatedPayload, ChatMessagePayload } from '@blobe/shared-types';
+import Redis from 'ioredis';
 import { prisma } from './db';
 import { sendPushToUser } from './push';
 import { sendEmailDigest } from './email';
+
+const redis = new Redis(process.env.REDIS_URL || 'redis://localhost:6379');
 
 const CHUNK = 100;
 
@@ -97,5 +100,34 @@ export async function handlePayment(payload: PaymentCreatedPayload): Promise<voi
 
   if (!prefs || prefs.emailEnabled) {
     await sendEmailDigest(payload.recipientId, 'payment_received', content);
+  }
+}
+
+export async function handleChatMessage(payload: ChatMessagePayload): Promise<void> {
+  for (const recipientId of payload.recipientIds) {
+    const prefs = await getPrefs(recipientId);
+    if (prefs && !prefs.newMessage) continue;
+
+    // Skip push if recipient is currently online in chat-service (shared Redis)
+    const isOnline = await redis.exists(`chat:presence:${recipientId}`);
+    if (isOnline) continue;
+
+    const content = 'You have a new message';
+
+    await prisma.notification.create({
+      data: {
+        userId: recipientId,
+        type: 'new_message',
+        content,
+        sourceId: payload.conversationId,
+        actorId: payload.senderId,
+      },
+    });
+
+    await sendPushToUser(recipientId, 'New Message', content, {
+      type: 'new_message',
+      conversationId: payload.conversationId,
+      messageId: payload.messageId,
+    });
   }
 }

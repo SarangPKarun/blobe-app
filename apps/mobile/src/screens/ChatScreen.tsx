@@ -1,94 +1,124 @@
-import React from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import {
     View,
     Text,
     StyleSheet,
     FlatList,
-    Image,
     TouchableOpacity,
+    ActivityIndicator,
+    Alert,
 } from "react-native";
 import Icon from "react-native-vector-icons/Ionicons";
 import { Colors } from "../theme/colors";
+import { listConversations } from "../api/chat";
+import type { Conversation } from "@blobe/shared-types";
 
-const chats = [
-    {
-        id: "1",
-        name: "Ava",
-        message: "Hey, how are you?",
-        time: "2m",
-        unread: 2,
-        image: "https://i.pravatar.cc/150?img=1",
-    },
-    {
-        id: "2",
-        name: "Noah",
-        message: "Let's meet tomorrow.",
-        time: "10m",
-        unread: 0,
-        image: "https://i.pravatar.cc/150?img=2",
-    },
-    {
-        id: "3",
-        name: "Emma",
-        message: "Sent a photo",
-        time: "1h",
-        unread: 1,
-        image: "https://i.pravatar.cc/150?img=3",
-    },
-    {
-        id: "4",
-        name: "Liam",
-        message: "Typing...",
-        time: "3h",
-        unread: 0,
-        image: "https://i.pravatar.cc/150?img=4",
-    },
-];
+export default function ChatScreen({ navigation }: { navigation: any }) {
+    const [conversations, setConversations] = useState<Conversation[]>([]);
+    const [loading, setLoading] = useState(true);
 
-export default function ChatScreen() {
-    const renderItem = ({ item }: any) => (
-        <TouchableOpacity style={styles.chatItem}>
-            <Image source={{ uri: item.image }} style={styles.avatar} />
+    const load = useCallback(async () => {
+        try {
+            const data = await listConversations();
+            setConversations(data);
+        } catch (err) {
+            console.error("[ChatScreen] failed to load conversations:", err);
+        } finally {
+            setLoading(false);
+        }
+    }, []);
 
-            <View style={styles.chatContent}>
-                <Text style={styles.name}>{item.name}</Text>
-                <Text style={styles.message}>{item.message}</Text>
-            </View>
+    useEffect(() => {
+        load();
+    }, [load]);
 
-            <View style={styles.rightSide}>
-                <Text style={styles.time}>{item.time}</Text>
+    const handleNewChat = () => {
+        Alert.prompt(
+            "New Chat",
+            "Enter the user ID to start a conversation:",
+            async (recipientId) => {
+                if (!recipientId?.trim()) return;
+                try {
+                    const { getOrCreateConversation } = await import("../api/chat");
+                    const conv = await getOrCreateConversation(recipientId.trim());
+                    navigation.navigate("Conversation", {
+                        conversationId: conv.id,
+                        recipientId: recipientId.trim(),
+                    });
+                } catch {
+                    Alert.alert("Error", "Could not start conversation.");
+                }
+            },
+        );
+    };
 
-                {item.unread > 0 && (
-                    <View style={styles.badge}>
-                        <Text style={styles.badgeText}>
-                            {item.unread}
-                        </Text>
-                    </View>
-                )}
-            </View>
-        </TouchableOpacity>
-    );
+    const renderItem = ({ item }: { item: Conversation }) => {
+        const otherParticipant = item.participants.find((p) => p.userId !== item.id);
+        const recipientId = otherParticipant?.userId ?? "";
+        const hasUnread = (item.unreadCount ?? 0) > 0;
+
+        return (
+            <TouchableOpacity
+                style={styles.chatItem}
+                onPress={() =>
+                    navigation.navigate("Conversation", {
+                        conversationId: item.id,
+                        recipientId,
+                    })
+                }
+            >
+                <View style={styles.avatar}>
+                    <Icon name="person-circle-outline" size={42} color={Colors.secondary} />
+                </View>
+
+                <View style={styles.chatContent}>
+                    <Text style={styles.name} numberOfLines={1}>
+                        {recipientId || "Chat"}
+                    </Text>
+                    <Text style={styles.message} numberOfLines={1}>
+                        {item.lastMessage ? "New message" : "No messages yet"}
+                    </Text>
+                </View>
+
+                <View style={styles.rightSide}>
+                    <Text style={styles.time}>
+                        {new Date(item.updatedAt).toLocaleTimeString([], {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                        })}
+                    </Text>
+                    {hasUnread && (
+                        <View style={styles.badge}>
+                            <Text style={styles.badgeText}>{item.unreadCount}</Text>
+                        </View>
+                    )}
+                </View>
+            </TouchableOpacity>
+        );
+    };
 
     return (
         <View style={styles.container}>
             <View style={styles.header}>
                 <Text style={styles.title}>Chats</Text>
-
-                <TouchableOpacity>
-                    <Icon
-                        name="create-outline"
-                        size={24}
-                        color={Colors.primary}
-                    />
+                <TouchableOpacity onPress={handleNewChat}>
+                    <Icon name="create-outline" size={24} color={Colors.primary} />
                 </TouchableOpacity>
             </View>
 
-            <FlatList
-                data={chats}
-                keyExtractor={(item) => item.id}
-                renderItem={renderItem}
-                showsVerticalScrollIndicator={false}
-            />
+            {loading ? (
+                <ActivityIndicator style={styles.loader} color={Colors.primary} />
+            ) : (
+                <FlatList
+                    data={conversations}
+                    keyExtractor={(item) => item.id}
+                    renderItem={renderItem}
+                    showsVerticalScrollIndicator={false}
+                    ListEmptyComponent={
+                        <Text style={styles.empty}>No conversations yet. Tap + to start one.</Text>
+                    }
+                />
+            )}
         </View>
     );
 }
@@ -100,20 +130,20 @@ const styles = StyleSheet.create({
         paddingTop: 55,
         paddingHorizontal: 16,
     },
-
     header: {
         flexDirection: "row",
         justifyContent: "space-between",
         alignItems: "center",
         marginBottom: 20,
     },
-
     title: {
         fontSize: 30,
         fontWeight: "700",
         color: Colors.primary,
     },
-
+    loader: {
+        marginTop: 40,
+    },
     chatItem: {
         flexDirection: "row",
         alignItems: "center",
@@ -121,40 +151,36 @@ const styles = StyleSheet.create({
         borderBottomWidth: 0.5,
         borderBottomColor: "#ddd",
     },
-
     avatar: {
         width: 54,
         height: 54,
         borderRadius: 27,
         marginRight: 14,
+        justifyContent: "center",
+        alignItems: "center",
+        backgroundColor: Colors.backgroundSoft,
     },
-
     chatContent: {
         flex: 1,
     },
-
     name: {
         fontSize: 16,
         fontWeight: "600",
         color: Colors.textPrimary,
         marginBottom: 4,
     },
-
     message: {
         fontSize: 14,
         color: Colors.textSecondary,
     },
-
     rightSide: {
         alignItems: "flex-end",
     },
-
     time: {
         fontSize: 12,
         color: Colors.textSecondary,
         marginBottom: 6,
     },
-
     badge: {
         minWidth: 22,
         height: 22,
@@ -164,10 +190,15 @@ const styles = StyleSheet.create({
         alignItems: "center",
         paddingHorizontal: 6,
     },
-
     badgeText: {
         color: "#fff",
         fontSize: 12,
         fontWeight: "700",
+    },
+    empty: {
+        textAlign: "center",
+        marginTop: 60,
+        color: Colors.textSecondary,
+        fontSize: 15,
     },
 });

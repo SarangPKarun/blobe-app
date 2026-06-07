@@ -1,5 +1,5 @@
 import { Kafka } from 'kafkajs';
-import { handlePostCreated, handleTrustVote, handlePayment } from './notificationDispatcher';
+import { handlePostCreated, handleTrustVote, handlePayment, handleChatMessage } from './notificationDispatcher';
 
 const kafka = new Kafka({
   clientId: 'notification-service',
@@ -13,7 +13,7 @@ export const connectKafkaConsumer = async (): Promise<void> => {
 
   await consumer.connect();
   await consumer.subscribe({
-    topics: ['posts', 'trust-votes', 'payments'],
+    topics: ['posts', 'trust-votes', 'payments', 'chat.message'],
     fromBeginning: false,
   });
 
@@ -33,9 +33,10 @@ export const connectKafkaConsumer = async (): Promise<void> => {
       const payload = event.payload ?? event;
 
       try {
-        if (topic === 'posts')       await handlePostCreated(payload);
-        if (topic === 'trust-votes') await handleTrustVote(payload);
-        if (topic === 'payments')    await handlePayment(payload);
+        if (topic === 'posts')        await handlePostCreated(payload);
+        if (topic === 'trust-votes')  await handleTrustVote(payload);
+        if (topic === 'payments')     await handlePayment(payload);
+        if (topic === 'chat.message') await handleChatMessage(payload);
       } catch (err) {
         console.error(`[kafka] handler failed for topic ${topic}:`, err);
         // Do not rethrow — keeps consumer offset advancing; failed events are logged not retried

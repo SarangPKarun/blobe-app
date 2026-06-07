@@ -21,3 +21,7 @@ export const SEARCH_SERVICE_URL = __DEV__
 export const PAYMENT_SERVICE_URL = __DEV__
   ? `http://${LOCAL_HOST}:3008`
   : 'https://payments.blobe.app';
+
+export const CHAT_SERVICE_URL = __DEV__
+  ? `http://${LOCAL_HOST}:3009`
+  : 'https://chat.blobe.app';
