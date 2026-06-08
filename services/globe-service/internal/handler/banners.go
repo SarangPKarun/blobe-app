@@ -4,23 +4,47 @@ import (
 	"context"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/golang-jwt/jwt/v5"
+	"github.com/google/uuid"
 
 	"github.com/blobeNative/globe-service/internal/cache"
 	"github.com/blobeNative/globe-service/internal/db"
+	kafkapkg "github.com/blobeNative/globe-service/internal/kafka"
 	"github.com/blobeNative/globe-service/internal/ranking"
 	"github.com/blobeNative/globe-service/internal/spatial"
 )
 
 type BannersHandler struct {
-	db       *db.DB
-	cache    *cache.Cache
-	quadtree *spatial.Tree
+	db          *db.DB
+	cache       *cache.Cache
+	quadtree    *spatial.Tree
+	producer    *kafkapkg.Producer
+	mlClient    *ranking.SageMakerClient
+	blendWeight float64
+	jwtSecret   []byte
 }
 
-func NewBannersHandler(database *db.DB, c *cache.Cache, qt *spatial.Tree) *BannersHandler {
-	return &BannersHandler{db: database, cache: c, quadtree: qt}
+func NewBannersHandler(
+	database *db.DB,
+	c *cache.Cache,
+	qt *spatial.Tree,
+	producer *kafkapkg.Producer,
+	mlClient *ranking.SageMakerClient,
+	blendWeight float64,
+	jwtSecret string,
+) *BannersHandler {
+	return &BannersHandler{
+		db:          database,
+		cache:       c,
+		quadtree:    qt,
+		producer:    producer,
+		mlClient:    mlClient,
+		blendWeight: blendWeight,
+		jwtSecret:   []byte(jwtSecret),
+	}
 }
 
 // GetBanners handles GET /banners?bbox=minLon,minLat,maxLon,maxLat&zoom=N
@@ -84,10 +108,31 @@ func (h *BannersHandler) GetBanners(c *fiber.Ctx) error {
 		all = all[:maxResults]
 	}
 
+	// Publish impression event asynchronously — never delays the HTTP response.
+	if h.producer != nil && len(all) > 0 {
+		ids := make([]string, len(all))
+		scores := make([]float64, len(all))
+		for i, b := range all {
+			ids[i] = b.ID
+			scores[i] = b.Score.Total
+		}
+		evt := kafkapkg.GlobeImpressionEvent{
+			RequestID: uuid.New().String(),
+			UserID:    h.extractUserID(c),
+			CenterLat: centerLat,
+			CenterLon: centerLon,
+			ZoomLevel: zoom,
+			BannerIDs: ids,
+			Scores:    scores,
+			ServedAt:  time.Now().UTC(),
+		}
+		go h.producer.PublishImpression(context.Background(), evt)
+	}
+
 	return c.JSON(fiber.Map{
 		"success": true,
 		"data": fiber.Map{
-			"banners":  all,
+			"banners":   all,
 			"geohashes": cells,
 		},
 	})
@@ -113,7 +158,7 @@ func (h *BannersHandler) resolve(ctx context.Context, cell string, centerLat, ce
 		return nil, err
 	}
 
-	ranked := ranking.Rank(posts, centerLat, centerLon)
+	ranked := ranking.Rank(posts, centerLat, centerLon, h.mlClient, h.blendWeight)
 	banners := make([]cache.GlobeBanner, len(ranked))
 	for i, r := range ranked {
 		banners[i] = r.GlobeBanner
@@ -122,6 +167,31 @@ func (h *BannersHandler) resolve(ctx context.Context, cell string, centerLat, ce
 	h.quadtree.Set(cell, banners)
 	_ = h.cache.SetBanners(ctx, cell, banners)
 	return banners, nil
+}
+
+// extractUserID parses the Authorization: Bearer <token> header and returns the
+// subject claim. Returns an empty string for anonymous requests or invalid tokens.
+func (h *BannersHandler) extractUserID(c *fiber.Ctx) string {
+	auth := c.Get("Authorization")
+	if !strings.HasPrefix(auth, "Bearer ") {
+		return ""
+	}
+	tokenStr := strings.TrimPrefix(auth, "Bearer ")
+	tok, err := jwt.Parse(tokenStr, func(t *jwt.Token) (interface{}, error) {
+		if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, fiber.ErrUnauthorized
+		}
+		return h.jwtSecret, nil
+	})
+	if err != nil || !tok.Valid {
+		return ""
+	}
+	claims, ok := tok.Claims.(jwt.MapClaims)
+	if !ok {
+		return ""
+	}
+	sub, _ := claims["sub"].(string)
+	return sub
 }
 
 func sortBanners(b []cache.GlobeBanner) {

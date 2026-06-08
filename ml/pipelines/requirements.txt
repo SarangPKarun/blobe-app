@@ -1,0 +1,31 @@
+# Airflow + providers
+apache-airflow==2.9.2
+apache-airflow-providers-amazon>=8.0.0
+
+# Feature store I/O
+pyarrow>=15.0.0
+s3fs>=2024.3.1
+pandas>=2.2.0
+
+# Model training (banner_rank)
+xgboost>=2.0.0
+scikit-learn>=1.4.0
+
+# Collaborative filter
+implicit>=0.7.2
+faiss-cpu>=1.8.0
+
+# Trust GNN (PyTorch Geometric — CPU build for Airflow worker)
+torch==2.1.0+cpu --find-links https://download.pytorch.org/whl/torch_stable.html
+torch-geometric>=2.5.0
+
+# MLflow
+mlflow>=2.13.0
+boto3>=1.34.0
+
+# Database
+sqlalchemy>=2.0.0
+psycopg2-binary>=2.9.9
+
+# Kafka consumer
+confluent-kafka>=2.3.0

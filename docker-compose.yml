@@ -111,8 +111,77 @@ services:
       /bin/sh -c "
         mc alias set local http://minio:9000 minioadmin minioadmin &&
         mc mb --ignore-existing local/blobe-media &&
-        echo 'Bucket blobe-media ready'
+        mc mb --ignore-existing local/blobe-ml &&
+        echo 'Buckets blobe-media and blobe-ml ready'
       "
+
+  mlflow:
+    image: ghcr.io/mlflow/mlflow:v2.13.0
+    container_name: blobe_mlflow
+    command: >
+      mlflow server
+        --host 0.0.0.0
+        --port 5000
+        --backend-store-uri postgresql://postgres:postgrespassword@postgres:5432/blobe
+        --default-artifact-root s3://blobe-ml/mlflow-artifacts/
+        --serve-artifacts
+    environment:
+      MLFLOW_S3_ENDPOINT_URL: http://minio:9000
+      AWS_ACCESS_KEY_ID: minioadmin
+      AWS_SECRET_ACCESS_KEY: minioadmin
+      AWS_DEFAULT_REGION: us-east-1
+    ports:
+      - "5000:5000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  ml-pipeline:
+    build: ./ml/pipelines
+    container_name: blobe_ml_pipeline
+    command: airflow standalone
+    environment:
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://postgres:postgrespassword@postgres:5432/blobe
+      AIRFLOW__CORE__DAGS_FOLDER: /opt/airflow/dags
+      AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+      AIRFLOW__WEBSERVER__SECRET_KEY: blobe-airflow-secret
+      MLFLOW_TRACKING_URI: http://mlflow:5000
+      MLFLOW_S3_ENDPOINT_URL: http://minio:9000
+      KAFKA_BROKER: kafka:29092
+      MINIO_ENDPOINT: http://minio:9000
+      AWS_ACCESS_KEY_ID: minioadmin
+      AWS_SECRET_ACCESS_KEY: minioadmin
+      AWS_DEFAULT_REGION: us-east-1
+      DATABASE_URL: postgresql://postgres:postgrespassword@postgres:5432/blobe
+      SAGEMAKER_ROLE_ARN: ""
+      SAGEMAKER_REGION: us-east-1
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+      mlflow:
+        condition: service_healthy
+    volumes:
+      - ./ml/pipelines/dags:/opt/airflow/dags:ro
+      - ./ml/models:/opt/airflow/ml/models:ro
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
 
   trust-service:
     build: ./services/trust-service
@@ -170,6 +239,33 @@ services:
         condition: service_healthy
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3008/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  globe-service:
+    build: ./services/globe-service
+    container_name: blobe_globe_service
+    env_file: ./services/globe-service/.env.example
+    environment:
+      DATABASE_URL: postgres://postgres:postgrespassword@postgres:5432/blobe?sslmode=disable
+      REDIS_URL: redis://redis:6379
+      KAFKA_BROKER: kafka:29092
+      SAGEMAKER_ENDPOINT: ""
+      SAGEMAKER_TIMEOUT_MS: "80"
+      ML_ENABLED: "false"
+      ML_BLEND_WEIGHT: "0.7"
+    ports:
+      - "3004:3004"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3004/health"]
       interval: 10s
       timeout: 5s
       retries: 5

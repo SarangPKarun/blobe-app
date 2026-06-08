@@ -55,3 +55,16 @@ Socket.io: Connect via Postman WebSocket with auth: { token }, emit message:send
 E2E encryption: Log encryptedContent server-side — should be opaque Base64; only the RN client can decrypt to plaintext.
 Push on background: Background the app, send a message from another account → push notification arrives with type: new_message and conversationId.
 Mobile: Tap a conversation in ChatScreen → ConversationScreen loads history → send a message → appears in both clients.
+
+
+
+ML pipeline — recommendation + banner rank
+
+## Verification
+
+- **Globe-events producer**: consume `globe-events` in Kafka UI; confirm messages appear after hitting `GET /banners`
+- **Feature store**: check MinIO console (`localhost:9001`) for Parquet files in `blobe-ml/raw/globe_events/`
+- **Airflow DAGs**: Airflow UI at `localhost:8080` — trigger `globe_events_dag` manually, confirm task success + Parquet written
+- **MLflow**: browse `localhost:5000` — confirm experiments and model registry entries after a DAG training run
+- **ML scoring in globe-service**: set `ML_ENABLED=true` + `SAGEMAKER_ENDPOINT` to a local endpoint; call `GET /banners`; check logs for `"sagemaker score failed"` vs silent success; verify blended scores in response
+- **Trust GNN**: after `push_scores_to_postgres` runs, query `SELECT score FROM "TrustScore" LIMIT 10` and compare to heuristic baseline scores from before the run

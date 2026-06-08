@@ -17,6 +17,7 @@ import (
 	"github.com/blobeNative/globe-service/internal/db"
 	"github.com/blobeNative/globe-service/internal/handler"
 	kafkaconsumer "github.com/blobeNative/globe-service/internal/kafka"
+	"github.com/blobeNative/globe-service/internal/ranking"
 	"github.com/blobeNative/globe-service/internal/spatial"
 	"github.com/blobeNative/globe-service/internal/ws"
 )
@@ -52,8 +53,20 @@ func main() {
 	consumer.Start(ctx)
 	defer consumer.Close()
 
+	// --- Kafka producer (globe-events) ---
+	producer := kafkaconsumer.NewProducer(cfg.KafkaBroker)
+	defer producer.Close()
+
+	// --- SageMaker client (nil when ML is disabled or endpoint not configured) ---
+	var mlClient *ranking.SageMakerClient
+	if cfg.MLEnabled && cfg.SageMakerEndpoint != "" {
+		mlClient = ranking.NewSageMakerClient(cfg.SageMakerEndpoint, cfg.SageMakerTimeoutMs)
+		log.Printf("ML scoring enabled: endpoint=%s timeout=%dms blend=%.2f",
+			cfg.SageMakerEndpoint, cfg.SageMakerTimeoutMs, cfg.MLBlendWeight)
+	}
+
 	// --- HTTP handlers ---
-	bannersH := handler.NewBannersHandler(database, redisCache, quadtree)
+	bannersH := handler.NewBannersHandler(database, redisCache, quadtree, producer, mlClient, cfg.MLBlendWeight, cfg.JWTSecret)
 	wsH := handler.NewWSHandler(hub, cfg.JWTSecret)
 
 	// --- Fiber app ---

@@ -151,7 +151,7 @@ func (c *Consumer) reRankForLocation(ctx context.Context, lat, lon float64) {
 			continue
 		}
 
-		ranked := ranking.Rank(posts, centerLat, centerLon)
+		ranked := ranking.Rank(posts, centerLat, centerLon, nil, 0)
 		banners := make([]cache.GlobeBanner, len(ranked))
 		for i, r := range ranked {
 			banners[i] = r.GlobeBanner

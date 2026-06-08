@@ -20,6 +20,9 @@ type PostRow struct {
 	TrustScore float64
 	VoteSum    float64
 	VoteCount  int64
+	HateScore  float64
+	SpamScore  float64
+	NsfwScore  float64
 }
 
 type DB struct {
@@ -42,19 +45,23 @@ const queryPostsInEnvelope = `
 SELECT
   p.id, p.title, p."frontText", p."backText", p."mediaUrl",
   p."authorId", p."createdAt",
-  ST_X(p.location::geometry) AS lon,
-  ST_Y(p.location::geometry) AS lat,
-  COALESCE(ts.score, 0)      AS trust_score,
-  COALESCE(SUM(v.value), 0)  AS vote_sum,
-  COUNT(v.id)                AS vote_count
+  ST_X(p.location::geometry)                      AS lon,
+  ST_Y(p.location::geometry)                      AS lat,
+  COALESCE(ts.score, 0)                           AS trust_score,
+  COALESCE(SUM(v.value), 0)                       AS vote_sum,
+  COUNT(v.id)                                     AS vote_count,
+  COALESCE((mr.scores->>'hate')::float,  0)       AS hate_score,
+  COALESCE((mr.scores->>'spam')::float,  0)       AS spam_score,
+  COALESCE((mr.scores->>'nsfw')::float,  0)       AS nsfw_score
 FROM "Post" p
-LEFT JOIN "TrustScore" ts ON ts."userId" = p."authorId"
-LEFT JOIN "Vote"        v  ON v."postId"  = p.id
+LEFT JOIN "TrustScore"      ts ON ts."userId"  = p."authorId"
+LEFT JOIN "Vote"             v  ON v."postId"   = p.id
+LEFT JOIN moderation_record  mr ON mr.post_id   = p.id
 WHERE ST_Intersects(
         p.location::geometry,
         ST_MakeEnvelope($1, $2, $3, $4, 4326)
       )
-GROUP BY p.id, ts.score
+GROUP BY p.id, ts.score, mr.scores
 `
 
 // QueryPostsInEnvelope returns all posts whose location falls within the given WGS84 bounding box.
@@ -74,6 +81,7 @@ func (d *DB) QueryPostsInEnvelope(ctx context.Context, minLon, minLat, maxLon, m
 			&p.AuthorID, &p.CreatedAt,
 			&p.Lon, &p.Lat,
 			&p.TrustScore, &p.VoteSum, &p.VoteCount,
+			&p.HateScore, &p.SpamScore, &p.NsfwScore,
 		); err != nil {
 			return nil, err
 		}
