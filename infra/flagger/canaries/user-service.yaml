@@ -1,0 +1,45 @@
+apiVersion: flagger.app/v1beta1
+kind: Canary
+metadata:
+  name: user-service
+  namespace: blobe
+spec:
+  provider: istio
+  targetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: user-service
+  progressDeadlineSeconds: 600
+  service:
+    port: 3001
+    portName: http
+    gateways:
+      - mesh
+    hosts:
+      - user-service
+    trafficPolicy:
+      tls:
+        mode: ISTIO_MUTUAL
+    retries:
+      attempts: 3
+      perTryTimeout: 3s
+      retryOn: gateway-error,connect-failure,refused-stream
+  analysis:
+    interval: 1m
+    threshold: 5
+    stepWeights: [5, 20, 50, 100]
+    metrics:
+      - name: error-rate
+        templateRef:
+          name: error-rate
+          namespace: blobe
+        thresholdRange:
+          max: 1
+        interval: 1m
+      - name: latency-p99
+        templateRef:
+          name: latency-p99
+          namespace: blobe
+        thresholdRange:
+          max: 400
+        interval: 1m

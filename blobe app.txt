@@ -80,3 +80,16 @@ Run terraform apply in global/ first, then us-east-1/, then eu-west-1/
 After EKS is up: install Istio, KEDA, External Secrets Operator, AWS LBC via ArgoCD infrastructure app
 Fill in placeholder values (ACCOUNT_ID, MSK bootstrap brokers, SageMaker endpoint) in infra/helm/values/us-east-1.yaml
 Run infra/scripts/build-and-push.sh to populate ECR before ArgoCD syncs the services app
+
+
+CI/CD — GitHub Actions + ArgoCD + Flagger
+
+## Verification
+
+1. **CI gate**: Create a feature branch, push a change to any service → verify lint/test/sast/build all run; break a test → verify job fails and blocks merge.
+2. **Coverage gate**: Add a file with 0% coverage → verify the 80% gate script exits non-zero.
+3. **Staging deploy**: Merge a PR → verify `cd-staging.yml` updates `staging.yaml` → ArgoCD `blobe-services-staging` syncs automatically.
+4. **Production promote**: Trigger `cd-production.yml` workflow manually → verify k6 runs, approval gate appears, ArgoCD syncs production, Flagger Canary object status shows `5% → 20% → ...` in `kubectl get canary -n blobe`.
+5. **Auto-rollback**: Inject an error in the canary pod → verify Flagger rolls back before reaching 20%.
+6. **Mobile OTA**: Push a JS-only change → verify `eas update` runs without `eas build`.
+7. **Mobile native**: Push a change under `apps/mobile/android/` → verify `eas build` + `eas submit` run.

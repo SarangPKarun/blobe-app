@@ -1,0 +1,33 @@
+apiVersion: flagger.app/v1beta1
+kind: MetricTemplate
+metadata:
+  name: error-rate
+  namespace: blobe
+spec:
+  provider:
+    type: prometheus
+    address: http://prometheus.monitoring.svc.cluster.local:9090
+  query: |
+    100 - (
+      sum(
+        rate(
+          istio_requests_total{
+            reporter="destination",
+            destination_service_namespace="{{ namespace }}",
+            destination_service_name="{{ target }}",
+            response_code!~"5.*"
+          }[{{ interval }}]
+        )
+      )
+      /
+      sum(
+        rate(
+          istio_requests_total{
+            reporter="destination",
+            destination_service_namespace="{{ namespace }}",
+            destination_service_name="{{ target }}"
+          }[{{ interval }}]
+        )
+      )
+      * 100
+    )

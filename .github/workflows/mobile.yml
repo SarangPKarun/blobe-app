@@ -1,0 +1,113 @@
+name: Mobile — EAS Build / OTA
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "apps/mobile/**"
+      - "packages/**"
+
+concurrency:
+  group: mobile-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ─── Detect whether native code changed ──────────────────────────────────────
+  detect-changes:
+    name: Detect native vs JS-only changes
+    runs-on: ubuntu-latest
+    outputs:
+      is_native: ${{ steps.detect.outputs.is_native }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - id: detect
+        name: Check for native file changes
+        run: |
+          CHANGED=$(git diff HEAD^1 --name-only -- \
+            apps/mobile/android \
+            apps/mobile/ios \
+            apps/mobile/package.json)
+          if [ -n "$CHANGED" ]; then
+            echo "is_native=true"  >> $GITHUB_OUTPUT
+            echo "Native changes detected:"
+            echo "$CHANGED"
+          else
+            echo "is_native=false" >> $GITHUB_OUTPUT
+            echo "JS-only changes — will use EAS Update (OTA)"
+          fi
+
+  # ─── OTA update for JS-only changes ──────────────────────────────────────────
+  eas-update:
+    name: EAS Update (OTA — staging channel)
+    runs-on: ubuntu-latest
+    needs: detect-changes
+    if: needs.detect-changes.outputs.is_native == 'false'
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      - run: npm ci --prefer-offline
+
+      - name: Setup EAS
+        uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EAS_TOKEN }}
+
+      - name: Publish OTA update
+        working-directory: apps/mobile
+        run: |
+          npx eas-cli update \
+            --channel staging \
+            --message "OTA: ${{ github.sha }}" \
+            --non-interactive
+
+  # ─── Full EAS Build + Submit for native changes ───────────────────────────────
+  eas-build:
+    name: EAS Build (${{ matrix.platform }})
+    runs-on: ubuntu-latest
+    needs: detect-changes
+    if: needs.detect-changes.outputs.is_native == 'true'
+    strategy:
+      matrix:
+        platform: [android, ios]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      - run: npm ci --prefer-offline
+
+      - name: Setup EAS
+        uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EAS_TOKEN }}
+
+      - name: Build
+        working-directory: apps/mobile
+        run: |
+          npx eas-cli build \
+            --platform ${{ matrix.platform }} \
+            --profile production \
+            --non-interactive \
+            --wait
+
+      - name: Submit to store
+        working-directory: apps/mobile
+        run: |
+          npx eas-cli submit \
+            --platform ${{ matrix.platform }} \
+            --profile production \
+            --non-interactive \
+            --latest

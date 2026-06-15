@@ -1,0 +1,72 @@
+name: CD — Production
+
+on:
+  workflow_dispatch:
+    inputs:
+      sha:
+        description: "Git SHA to promote (defaults to latest main)"
+        required: false
+        type: string
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  # ─── k6 load test gate against staging ───────────────────────────────────────
+  k6-load-test:
+    name: k6 load test — staging gate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run k6 load test
+        uses: grafana/k6-action@v0.3.1
+        with:
+          filename: infra/k6/load-test.js
+          flags: --env BASE_URL=${{ vars.STAGING_API_URL }}
+
+  # ─── Manual approval gate ─────────────────────────────────────────────────────
+  approve:
+    name: Manual approval
+    runs-on: ubuntu-latest
+    needs: k6-load-test
+    environment: production   # GitHub environment — configure required reviewers in repo Settings
+    steps:
+      - name: Approved
+        run: echo "Production promotion approved"
+
+  # ─── Promote to production via ArgoCD ────────────────────────────────────────
+  promote:
+    name: ArgoCD sync — production
+    runs-on: ubuntu-latest
+    needs: approve
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install ArgoCD CLI
+        run: |
+          curl -sSL -o /usr/local/bin/argocd \
+            https://github.com/argoproj/argo-cd/releases/latest/download/argocd-linux-amd64
+          chmod +x /usr/local/bin/argocd
+
+      - name: Sync blobe-services-production
+        run: |
+          argocd app sync blobe-services-production \
+            --server   "${{ secrets.ARGOCD_SERVER }}" \
+            --auth-token "${{ secrets.ARGOCD_AUTH_TOKEN }}" \
+            --grpc-web \
+            --timeout 300 \
+            --prune \
+            --force
+        # Flagger takes control after ArgoCD creates/updates the Deployment.
+        # Watch canary rollout: kubectl get canary -n blobe -w
+
+      - name: Wait for ArgoCD health
+        run: |
+          argocd app wait blobe-services-production \
+            --server   "${{ secrets.ARGOCD_SERVER }}" \
+            --auth-token "${{ secrets.ARGOCD_AUTH_TOKEN }}" \
+            --grpc-web \
+            --health \
+            --timeout 600

@@ -1,0 +1,31 @@
+apiVersion: flagger.app/v1beta1
+kind: MetricTemplate
+metadata:
+  name: payment-errors
+  namespace: blobe
+spec:
+  provider:
+    type: prometheus
+    address: http://prometheus.monitoring.svc.cluster.local:9090
+  query: |
+    sum(
+      rate(
+        istio_requests_total{
+          reporter="destination",
+          destination_service_namespace="{{ namespace }}",
+          destination_service_name="payment-service",
+          response_code=~"5.*"
+        }[{{ interval }}]
+      )
+    )
+    /
+    sum(
+      rate(
+        istio_requests_total{
+          reporter="destination",
+          destination_service_namespace="{{ namespace }}",
+          destination_service_name="payment-service"
+        }[{{ interval }}]
+      )
+    )
+    * 100

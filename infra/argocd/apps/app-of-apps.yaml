@@ -1,7 +1,7 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: blobe-services
+  name: blobe-app-of-apps
   namespace: argocd
   finalizers:
     - resources-finalizer.argocd.argoproj.io
@@ -10,22 +10,23 @@ spec:
   source:
     repoURL: https://github.com/SarangPKarun/blobeNative
     targetRevision: HEAD
-    path: infra/helm/charts/blobe-services
-    helm:
-      valueFiles:
-        - ../../../../infra/helm/values/us-east-1.yaml
+    path: infra/argocd/apps
+    directory:
+      recurse: false
+      include: "*.yaml"
+      exclude: "app-of-apps.yaml"
   destination:
     server: https://kubernetes.default.svc
-    namespace: blobe
-  # Superseded by blobe-services-production.yaml (managed via app-of-apps).
-  # Kept for reference; auto-sync disabled — production syncs are triggered by cd-production.yml.
+    namespace: argocd
   syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
     syncOptions:
       - CreateNamespace=false
-      - ServerSideApply=true
     retry:
-      limit: 3
+      limit: 5
       backoff:
-        duration: 10s
+        duration: 5s
         factor: 2
         maxDuration: 3m
