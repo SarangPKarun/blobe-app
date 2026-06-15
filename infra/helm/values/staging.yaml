@@ -7,79 +7,69 @@ global:
   environment: staging
   kafka:
     bootstrapServers: "TODO-msk-bootstrap-brokers-sasl-us-east-1:9098"
-
 "user-service":
   image:
     repository: ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com/blobe/user-service
-    tag: latest
+    tag: 0220e90f5ac3ee20b9a10eb46aac10c0e577ad12
   serviceAccount:
     roleArn: "arn:aws:iam::ACCOUNT_ID:role/blobe-staging-user-service"
   replicaCount: 1
-
 "post-service":
   image:
     repository: ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com/blobe/post-service
-    tag: latest
+    tag: 0220e90f5ac3ee20b9a10eb46aac10c0e577ad12
   serviceAccount:
     roleArn: "arn:aws:iam::ACCOUNT_ID:role/blobe-staging-post-service"
   replicaCount: 1
-
 "notification-service":
   image:
     repository: ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com/blobe/notification-service
-    tag: latest
+    tag: 0220e90f5ac3ee20b9a10eb46aac10c0e577ad12
   serviceAccount:
     roleArn: "arn:aws:iam::ACCOUNT_ID:role/blobe-staging-notification-service"
   replicaCount: 1
-
 "globe-service":
   image:
     repository: ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com/blobe/globe-service
-    tag: latest
+    tag: 0220e90f5ac3ee20b9a10eb46aac10c0e577ad12
   serviceAccount:
     roleArn: "arn:aws:iam::ACCOUNT_ID:role/blobe-staging-globe-service"
   replicaCount: 1
-
 "search-service":
   image:
     repository: ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com/blobe/search-service
-    tag: latest
+    tag: 0220e90f5ac3ee20b9a10eb46aac10c0e577ad12
   serviceAccount:
     roleArn: "arn:aws:iam::ACCOUNT_ID:role/blobe-staging-search-service"
   replicaCount: 1
-
 "trust-service":
   image:
     repository: ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com/blobe/trust-service
-    tag: latest
+    tag: 0220e90f5ac3ee20b9a10eb46aac10c0e577ad12
   serviceAccount:
     roleArn: "arn:aws:iam::ACCOUNT_ID:role/blobe-staging-trust-service"
   replicaCount: 1
-
 "moderation-service":
   image:
     repository: ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com/blobe/moderation-service
-    tag: latest
+    tag: 0220e90f5ac3ee20b9a10eb46aac10c0e577ad12
   serviceAccount:
     roleArn: "arn:aws:iam::ACCOUNT_ID:role/blobe-staging-moderation-service"
   replicaCount: 1
-
 "payment-service":
   image:
     repository: ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com/blobe/payment-service
-    tag: latest
+    tag: 0220e90f5ac3ee20b9a10eb46aac10c0e577ad12
   serviceAccount:
     roleArn: "arn:aws:iam::ACCOUNT_ID:role/blobe-staging-payment-service"
   replicaCount: 1
-
 "chat-service":
   image:
     repository: ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com/blobe/chat-service
-    tag: latest
+    tag: 0220e90f5ac3ee20b9a10eb46aac10c0e577ad12
   serviceAccount:
     roleArn: "arn:aws:iam::ACCOUNT_ID:role/blobe-staging-chat-service"
   replicaCount: 1
-
 "ml-pipeline":
   serviceAccount:
     roleArn: "arn:aws:iam::ACCOUNT_ID:role/blobe-staging-ml-pipeline"
