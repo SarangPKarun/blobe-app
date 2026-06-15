@@ -1,0 +1,83 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-webserver
+  namespace: {{ .Values.global.namespace | default "ml" }}
+  labels:
+    app: {{ .Release.Name }}-webserver
+spec:
+  replicas: {{ .Values.webserver.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ .Release.Name }}-webserver
+  template:
+    metadata:
+      labels:
+        app: {{ .Release.Name }}-webserver
+    spec:
+      serviceAccountName: {{ .Release.Name }}
+      nodeSelector:
+        {{- toYaml .Values.nodeSelector | nindent 8 }}
+      tolerations:
+        {{- toYaml .Values.tolerations | nindent 8 }}
+      containers:
+        - name: webserver
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          command: ["airflow", "webserver"]
+          envFrom:
+            - configMapRef:
+                name: ml-pipeline-config
+          env:
+            - name: AIRFLOW__DATABASE__SQL_ALCHEMY_CONN
+              valueFrom:
+                secretKeyRef:
+                  name: blobe-airflow-db-conn
+                  key: conn
+            - name: AIRFLOW__CORE__FERNET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: blobe-airflow-fernet
+                  key: key
+            - name: AIRFLOW__WEBSERVER__SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: blobe-airflow-webserver
+                  key: key
+            - name: KAFKA_BROKER
+              valueFrom:
+                secretKeyRef:
+                  name: blobe-kafka-brokers
+                  key: brokers
+          ports:
+            - containerPort: {{ .Values.webserver.service.port }}
+          resources:
+            {{- toYaml .Values.webserver.resources | nindent 12 }}
+          volumeMounts:
+            - name: dags
+              mountPath: /opt/airflow/dags
+            - name: pod-template
+              mountPath: /opt/airflow/pod_template.yaml
+              subPath: pod_template.yaml
+      volumes:
+        - name: dags
+          configMap:
+            name: ml-dags
+        - name: pod-template
+          configMap:
+            name: ml-pod-template
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Release.Name }}-webserver
+  namespace: {{ .Values.global.namespace | default "ml" }}
+  labels:
+    app: {{ .Release.Name }}-webserver
+spec:
+  type: {{ .Values.webserver.service.type }}
+  selector:
+    app: {{ .Release.Name }}-webserver
+  ports:
+    - protocol: TCP
+      port: {{ .Values.webserver.service.port }}
+      targetPort: {{ .Values.webserver.service.port }}

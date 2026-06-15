@@ -1,0 +1,71 @@
+# Per-environment Helm value overrides — us-east-1 (primary production)
+# Usage: helm upgrade --install blobe-services ./charts/blobe-services \
+#          -f values/us-east-1.yaml
+
+global:
+  imageRegistry: "ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com"
+  region: us-east-1
+  environment: production
+  kafka:
+    bootstrapServers: "TODO-msk-bootstrap-brokers-sasl-us-east-1:9098"
+
+"user-service":
+  image:
+    repository: ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com/blobe/user-service
+  serviceAccount:
+    roleArn: "arn:aws:iam::ACCOUNT_ID:role/blobe-production-user-service"
+  replicaCount: 2
+
+"post-service":
+  image:
+    repository: ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com/blobe/post-service
+  serviceAccount:
+    roleArn: "arn:aws:iam::ACCOUNT_ID:role/blobe-production-post-service"
+  replicaCount: 2
+
+"notification-service":
+  image:
+    repository: ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com/blobe/notification-service
+  serviceAccount:
+    roleArn: "arn:aws:iam::ACCOUNT_ID:role/blobe-production-notification-service"
+
+"globe-service":
+  image:
+    repository: ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com/blobe/globe-service
+  serviceAccount:
+    roleArn: "arn:aws:iam::ACCOUNT_ID:role/blobe-production-globe-service"
+  replicaCount: 3
+
+"search-service":
+  image:
+    repository: ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com/blobe/search-service
+  serviceAccount:
+    roleArn: "arn:aws:iam::ACCOUNT_ID:role/blobe-production-search-service"
+
+"trust-service":
+  image:
+    repository: ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com/blobe/trust-service
+  serviceAccount:
+    roleArn: "arn:aws:iam::ACCOUNT_ID:role/blobe-production-trust-service"
+
+"moderation-service":
+  image:
+    repository: ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com/blobe/moderation-service
+  serviceAccount:
+    roleArn: "arn:aws:iam::ACCOUNT_ID:role/blobe-production-moderation-service"
+
+"payment-service":
+  image:
+    repository: ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com/blobe/payment-service
+  serviceAccount:
+    roleArn: "arn:aws:iam::ACCOUNT_ID:role/blobe-production-payment-service"
+
+"chat-service":
+  image:
+    repository: ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com/blobe/chat-service
+  serviceAccount:
+    roleArn: "arn:aws:iam::ACCOUNT_ID:role/blobe-production-chat-service"
+
+"ml-pipeline":
+  serviceAccount:
+    roleArn: "arn:aws:iam::ACCOUNT_ID:role/blobe-production-ml-pipeline"

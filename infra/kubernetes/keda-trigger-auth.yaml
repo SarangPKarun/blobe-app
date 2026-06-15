@@ -1,0 +1,19 @@
+apiVersion: keda.sh/v1alpha1
+kind: TriggerAuthentication
+metadata:
+  name: keda-msk-iam-auth
+  namespace: blobe
+spec:
+  podIdentity:
+    provider: aws-eks
+
+---
+# KEDA operator ServiceAccount with IRSA for MSK IAM auth
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: keda-operator
+  namespace: keda
+  annotations:
+    eks.amazonaws.com/role-arn: "TODO-replace-with-keda-irsa-role-arn"
+    eks.amazonaws.com/sts-regional-endpoints: "true"

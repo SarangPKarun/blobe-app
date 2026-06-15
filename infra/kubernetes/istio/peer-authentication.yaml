@@ -1,0 +1,29 @@
+apiVersion: security.istio.io/v1beta1
+kind: PeerAuthentication
+metadata:
+  name: default
+  namespace: blobe
+spec:
+  mtls:
+    mode: STRICT
+---
+apiVersion: security.istio.io/v1beta1
+kind: PeerAuthentication
+metadata:
+  name: default
+  namespace: ml
+spec:
+  mtls:
+    mode: STRICT
+---
+apiVersion: security.istio.io/v1beta1
+kind: PeerAuthentication
+metadata:
+  name: kong-gateway-permissive
+  namespace: blobe
+spec:
+  selector:
+    matchLabels:
+      app: kong-gateway
+  mtls:
+    mode: PERMISSIVE

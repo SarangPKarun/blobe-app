@@ -1,0 +1,5 @@
+apiVersion: v2
+name: moderation-service
+version: 1.0.0
+description: AI-powered content moderation service (Python/FastAPI + PyTorch)
+type: application

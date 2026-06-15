@@ -1,0 +1,26 @@
+replicaCount: 2
+
+image:
+  repository: blobe/payment-service
+  tag: latest
+  pullPolicy: IfNotPresent
+
+service:
+  port: 3008
+  type: ClusterIP
+
+serviceAccount:
+  roleArn: ""
+
+resources:
+  requests:
+    cpu: 250m
+    memory: 256Mi
+  limits:
+    cpu: 500m
+    memory: 512Mi
+
+autoscaling:
+  minReplicas: 2
+  maxReplicas: 10
+  cpuUtilization: 70

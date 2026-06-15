@@ -1,0 +1,153 @@
+# Istio AuthorizationPolicy — per-service allow rules
+# Namespace: blobe
+# All policies use mTLS peer authentication; principals are SPIFFE workload identities.
+
+apiVersion: security.istio.io/v1beta1
+kind: AuthorizationPolicy
+metadata:
+  name: allow-user-service
+  namespace: blobe
+spec:
+  selector:
+    matchLabels: { app: user-service }
+  rules:
+    - from:
+        - source:
+            principals:
+              - cluster.local/ns/blobe/sa/kong-gateway
+              - cluster.local/ns/blobe/sa/notification-service
+              - cluster.local/ns/monitoring/sa/prometheus-server
+---
+apiVersion: security.istio.io/v1beta1
+kind: AuthorizationPolicy
+metadata:
+  name: allow-post-service
+  namespace: blobe
+spec:
+  selector:
+    matchLabels: { app: post-service }
+  rules:
+    - from:
+        - source:
+            principals:
+              - cluster.local/ns/blobe/sa/kong-gateway
+              - cluster.local/ns/monitoring/sa/prometheus-server
+---
+apiVersion: security.istio.io/v1beta1
+kind: AuthorizationPolicy
+metadata:
+  name: allow-globe-service
+  namespace: blobe
+spec:
+  selector:
+    matchLabels: { app: globe-service }
+  rules:
+    - from:
+        - source:
+            principals:
+              - cluster.local/ns/blobe/sa/kong-gateway
+              - cluster.local/ns/monitoring/sa/prometheus-server
+---
+apiVersion: security.istio.io/v1beta1
+kind: AuthorizationPolicy
+metadata:
+  name: allow-search-service
+  namespace: blobe
+spec:
+  selector:
+    matchLabels: { app: search-service }
+  rules:
+    - from:
+        - source:
+            principals:
+              - cluster.local/ns/blobe/sa/kong-gateway
+              - cluster.local/ns/monitoring/sa/prometheus-server
+---
+apiVersion: security.istio.io/v1beta1
+kind: AuthorizationPolicy
+metadata:
+  name: allow-trust-service
+  namespace: blobe
+spec:
+  selector:
+    matchLabels: { app: trust-service }
+  rules:
+    - from:
+        - source:
+            principals:
+              - cluster.local/ns/blobe/sa/kong-gateway
+              - cluster.local/ns/monitoring/sa/prometheus-server
+---
+apiVersion: security.istio.io/v1beta1
+kind: AuthorizationPolicy
+metadata:
+  name: allow-notification-service
+  namespace: blobe
+spec:
+  selector:
+    matchLabels: { app: notification-service }
+  rules:
+    - from:
+        - source:
+            principals:
+              - cluster.local/ns/blobe/sa/kong-gateway
+              - cluster.local/ns/monitoring/sa/prometheus-server
+---
+apiVersion: security.istio.io/v1beta1
+kind: AuthorizationPolicy
+metadata:
+  name: allow-moderation-service
+  namespace: blobe
+spec:
+  selector:
+    matchLabels: { app: moderation-service }
+  rules:
+    - from:
+        - source:
+            principals:
+              - cluster.local/ns/blobe/sa/kong-gateway
+              - cluster.local/ns/monitoring/sa/prometheus-server
+---
+apiVersion: security.istio.io/v1beta1
+kind: AuthorizationPolicy
+metadata:
+  name: allow-payment-service
+  namespace: blobe
+spec:
+  selector:
+    matchLabels: { app: payment-service }
+  rules:
+    - from:
+        - source:
+            principals:
+              - cluster.local/ns/blobe/sa/kong-gateway
+              - cluster.local/ns/monitoring/sa/prometheus-server
+---
+apiVersion: security.istio.io/v1beta1
+kind: AuthorizationPolicy
+metadata:
+  name: allow-chat-service
+  namespace: blobe
+spec:
+  selector:
+    matchLabels: { app: chat-service }
+  rules:
+    - from:
+        - source:
+            principals:
+              - cluster.local/ns/blobe/sa/kong-gateway
+              - cluster.local/ns/monitoring/sa/prometheus-server
+---
+apiVersion: security.istio.io/v1beta1
+kind: AuthorizationPolicy
+metadata:
+  name: allow-ml-pipeline
+  namespace: blobe
+spec:
+  selector:
+    matchLabels: { app: ml-pipeline }
+  rules:
+    - from:
+        - source:
+            principals:
+              - cluster.local/ns/monitoring/sa/prometheus-server

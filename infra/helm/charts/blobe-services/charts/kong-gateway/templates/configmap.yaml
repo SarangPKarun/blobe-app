@@ -1,0 +1,285 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: kong-config
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "kong-gateway.labels" . | nindent 4 }}
+data:
+  kong.yml: |
+    _format_version: "3.0"
+    _transform: true
+
+    # ---------------------------------------------------------------------------
+    # Consumers & JWT credentials
+    # ---------------------------------------------------------------------------
+    consumers:
+      - username: blobe-app
+
+    jwt_secrets:
+      - consumer: blobe-app
+        key: blobe-app
+        algorithm: HS256
+        # Production secret must be injected via a sealed-secret or external-secrets
+        # operator into the JWT_SECRET env var and referenced here via envsubst at
+        # deploy time.  The placeholder below MUST be replaced before going live.
+        secret: "${JWT_SECRET}"
+
+    # ---------------------------------------------------------------------------
+    # Services & Routes
+    # ---------------------------------------------------------------------------
+    services:
+
+      # -- User Service ----------------------------------------------------------
+      - name: user-service
+        url: http://user-service.blobe.svc.cluster.local:3001
+        routes:
+
+          # Public: username availability check
+          - name: user-check-username
+            methods: [GET]
+            paths: [/users/check-username]
+            strip_path: false
+
+          # Public: registration (Firebase ID token verified by the service itself)
+          - name: user-register
+            methods: [POST]
+            paths: [/users]
+            strip_path: false
+
+          # Protected: all other /users/** routes
+          - name: user-protected
+            paths: [/users]
+            strip_path: false
+            plugins:
+              - name: jwt
+                config:
+                  key_claim_name: iss
+                  claims_to_verify: []
+
+      # -- Post Service ----------------------------------------------------------
+      - name: post-service
+        url: http://post-service.blobe.svc.cluster.local:3002
+        routes:
+          - name: post-routes
+            paths: [/posts]
+            strip_path: false
+            plugins:
+              - name: jwt
+                config:
+                  key_claim_name: iss
+                  claims_to_verify: []
+
+      # -- Notification Service: notification-prefs (regex, higher priority) -----
+      - name: notification-prefs-service
+        url: http://notification-service.blobe.svc.cluster.local:3003
+        routes:
+          - name: notification-prefs-routes
+            paths:
+              - ~/users/[^/]+/preferences$
+              - ~/users/[^/]+/notification-prefs$
+            regex_priority: 10
+            strip_path: false
+            plugins:
+              - name: jwt
+                config:
+                  key_claim_name: iss
+                  claims_to_verify: []
+
+      # -- Notification Service: notifications & device-tokens ------------------
+      - name: notification-service
+        url: http://notification-service.blobe.svc.cluster.local:3003
+        routes:
+          - name: notification-routes
+            paths: [/notifications, /device-tokens]
+            strip_path: false
+            plugins:
+              - name: jwt
+                config:
+                  key_claim_name: iss
+                  claims_to_verify: []
+
+      # -- Search Service --------------------------------------------------------
+      - name: search-service
+        url: http://search-service.blobe.svc.cluster.local:3005
+        routes:
+          - name: search-weights
+            paths: [/search/weights]
+            methods: [POST]
+            strip_path: false
+            plugins:
+              - name: jwt
+                config:
+                  key_claim_name: iss
+                  claims_to_verify: []
+          - name: search-suggest
+            paths: [/search/suggest]
+            methods: [GET]
+            strip_path: false
+            plugins:
+              - name: jwt
+                config:
+                  key_claim_name: iss
+                  claims_to_verify: []
+          - name: search-trending
+            paths: [/search/trending]
+            methods: [GET]
+            strip_path: false
+            plugins:
+              - name: jwt
+                config:
+                  key_claim_name: iss
+                  claims_to_verify: []
+
+      # -- Globe Service ---------------------------------------------------------
+      - name: globe-service
+        url: http://globe-service.blobe.svc.cluster.local:3004
+        routes:
+          - name: globe-banners
+            paths: [/banners]
+            methods: [GET]
+            strip_path: false
+            plugins:
+              - name: jwt
+                config:
+                  key_claim_name: iss
+                  claims_to_verify: []
+          - name: globe-ws
+            paths: [/ws]
+            methods: [GET]
+            strip_path: false
+            # JWT validated in-service via ?token= query param; no Kong plugin here.
+
+      # -- Trust Service ---------------------------------------------------------
+      - name: trust-service
+        url: http://trust-service.blobe.svc.cluster.local:3006
+        routes:
+          - name: trust-votes-routes
+            paths: [/votes, /appeals]
+            strip_path: false
+            plugins:
+              - name: jwt
+                config:
+                  key_claim_name: iss
+                  claims_to_verify: []
+          - name: trust-user-score
+            paths:
+              - ~/users/[^/]+/trust$
+            regex_priority: 8
+            methods: [GET]
+            strip_path: false
+            plugins:
+              - name: jwt
+                config:
+                  key_claim_name: iss
+                  claims_to_verify: []
+
+      # -- Payment Service -------------------------------------------------------
+      - name: payment-service
+        url: http://payment-service.blobe.svc.cluster.local:3008
+        routes:
+          # Public: Stripe webhook (no JWT — Stripe signs requests with STRIPE_WEBHOOK_SECRET)
+          - name: stripe-webhook
+            paths: [/stripe/webhook]
+            methods: [POST]
+            strip_path: false
+
+          # Protected: connect, donations, campaigns, ads
+          - name: payment-protected
+            paths: [/connect, /donations, /campaigns, /ads, /users]
+            strip_path: false
+            plugins:
+              - name: jwt
+                config:
+                  key_claim_name: iss
+                  claims_to_verify: []
+
+      # -- Chat Service ----------------------------------------------------------
+      - name: chat-service
+        url: http://chat-service.blobe.svc.cluster.local:3009
+        routes:
+          # Socket.io handshake — auth handled in-service via socket.handshake.auth.token
+          - name: chat-socketio
+            paths: [/socket.io]
+            strip_path: false
+
+          # Protected REST routes
+          - name: chat-rest
+            paths: [/conversations, /keys]
+            strip_path: false
+            plugins:
+              - name: jwt
+                config:
+                  key_claim_name: iss
+                  claims_to_verify: []
+
+      # -- Moderation Service ----------------------------------------------------
+      - name: moderation-service
+        url: http://moderation-service.blobe.svc.cluster.local:3007
+        routes:
+          - name: moderation-queue
+            paths: [/queue]
+            strip_path: false
+            plugins:
+              - name: jwt
+                config:
+                  key_claim_name: iss
+                  claims_to_verify: []
+
+    # ---------------------------------------------------------------------------
+    # Global Plugins
+    # ---------------------------------------------------------------------------
+    plugins:
+
+      # Request ID header for distributed tracing
+      - name: correlation-id
+        config:
+          header_name: X-Request-ID
+          generator: uuid
+          echo_downstream: true
+
+      # CORS — restricted to production origin
+      - name: cors
+        config:
+          origins:
+            - "https://blobe.app"
+          methods:
+            - GET
+            - POST
+            - PATCH
+            - DELETE
+            - OPTIONS
+            - HEAD
+          headers:
+            - Authorization
+            - Content-Type
+            - X-Request-ID
+          exposed_headers:
+            - X-Request-ID
+          preflight_continue: false
+          max_age: 3600
+
+      # Rate limiting by IP — 100 req/min (Redis-backed)
+      - name: rate-limiting
+        config:
+          minute: 100
+          policy: redis
+          redis_host: blobe-redis.blobe.svc.cluster.local
+          redis_port: 6379
+          limit_by: ip
+          error_code: 429
+          error_message: "Rate limit exceeded"
+          hide_client_headers: false
+
+      # Rate limiting by authenticated consumer — 60 req/min (Redis-backed)
+      - name: rate-limiting
+        instance_name: rate-limiting-consumer
+        config:
+          minute: 60
+          policy: redis
+          redis_host: blobe-redis.blobe.svc.cluster.local
+          redis_port: 6379
+          limit_by: consumer
+          error_code: 429
+          error_message: "Rate limit exceeded"
+          hide_client_headers: false

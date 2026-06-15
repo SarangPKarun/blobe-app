@@ -1,0 +1,6 @@
+apiVersion: v2
+name: payment-service
+version: 1.0.0
+description: Node.js/Fastify payment service with Stripe Connect and HPA autoscaling
+type: application
+appVersion: "1.0.0"

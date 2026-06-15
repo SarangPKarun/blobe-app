@@ -1,0 +1,14 @@
+node_modules
+.git
+.env
+*.env
+dist
+.turbo
+apps/mobile/android
+apps/mobile/ios
+apps/mobile/node_modules
+apps/globe-webview/node_modules
+**/*.test.ts
+**/*.spec.ts
+coverage
+.nyc_output

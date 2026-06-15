@@ -1,0 +1,40 @@
+apiVersion: v2
+name: blobe-services
+description: Blobe platform microservices umbrella chart
+type: application
+version: 1.0.0
+appVersion: "1.0.0"
+dependencies:
+  - name: user-service
+    version: "1.0.0"
+    repository: "file://charts/user-service"
+  - name: post-service
+    version: "1.0.0"
+    repository: "file://charts/post-service"
+  - name: notification-service
+    version: "1.0.0"
+    repository: "file://charts/notification-service"
+  - name: globe-service
+    version: "1.0.0"
+    repository: "file://charts/globe-service"
+  - name: search-service
+    version: "1.0.0"
+    repository: "file://charts/search-service"
+  - name: trust-service
+    version: "1.0.0"
+    repository: "file://charts/trust-service"
+  - name: moderation-service
+    version: "1.0.0"
+    repository: "file://charts/moderation-service"
+  - name: payment-service
+    version: "1.0.0"
+    repository: "file://charts/payment-service"
+  - name: chat-service
+    version: "1.0.0"
+    repository: "file://charts/chat-service"
+  - name: kong-gateway
+    version: "1.0.0"
+    repository: "file://charts/kong-gateway"
+  - name: ml-pipeline
+    version: "1.0.0"
+    repository: "file://charts/ml-pipeline"

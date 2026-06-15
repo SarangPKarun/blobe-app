@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ml-pipeline-config
+  namespace: {{ .Values.global.namespace | default "ml" }}
+data:
+  AIRFLOW__CORE__EXECUTOR: {{ .Values.executor }}
+  AIRFLOW__CORE__DAGS_FOLDER: /opt/airflow/dags
+  AIRFLOW__CORE__LOAD_EXAMPLES: "False"
+  AIRFLOW__KUBERNETES__NAMESPACE: ml
+  AIRFLOW__KUBERNETES__WORKER_CONTAINER_REPOSITORY: {{ .Values.image.repository }}
+  AIRFLOW__KUBERNETES__WORKER_CONTAINER_TAG: {{ .Values.image.tag | quote }}
+  AIRFLOW__KUBERNETES__DELETE_WORKER_PODS: "True"
+  AIRFLOW__KUBERNETES__DELETE_WORKER_PODS_ON_FAILURE: "False"
+  AIRFLOW__KUBERNETES__POD_TEMPLATE_FILE: /opt/airflow/pod_template.yaml
+  MLFLOW_TRACKING_URI: http://mlflow.ml.svc.cluster.local:5000
+  SAGEMAKER_REGION: us-east-1

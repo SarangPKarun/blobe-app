@@ -1,0 +1,23 @@
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: {{ include "moderation-service.fullname" . }}
+  labels:
+    {{- include "moderation-service.labels" . | nindent 4 }}
+spec:
+  scaleTargetRef:
+    name: {{ include "moderation-service.fullname" . }}
+  minReplicaCount: {{ .Values.autoscaling.minReplicas }}
+  maxReplicaCount: {{ .Values.autoscaling.maxReplicas }}
+  pollingInterval: 30
+  cooldownPeriod: 300
+  triggers:
+    - type: kafka
+      metadata:
+        consumerGroup: moderation-service-group
+        topic: moderation-queue
+        lagThreshold: {{ .Values.autoscaling.kafkaLagThreshold | quote }}
+    - type: cpu
+      metricType: Utilization
+      metadata:
+        value: {{ .Values.autoscaling.cpuUtilization | quote }}

@@ -1,0 +1,41 @@
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: blobe-services-multiregion
+  namespace: argocd
+spec:
+  generators:
+    - list:
+        elements:
+          - cluster: us-east-1
+            url: https://CLUSTER_ENDPOINT_US_EAST_1
+            valuesFile: infra/helm/values/us-east-1.yaml
+            environment: production-us-east-1
+          - cluster: eu-west-1
+            url: https://CLUSTER_ENDPOINT_EU_WEST_1
+            valuesFile: infra/helm/values/eu-west-1.yaml
+            environment: production-eu-west-1
+  template:
+    metadata:
+      name: 'blobe-services-{{cluster}}'
+      finalizers:
+        - resources-finalizer.argocd.argoproj.io
+    spec:
+      project: default
+      source:
+        repoURL: https://github.com/SarangPKarun/blobeNative
+        targetRevision: HEAD
+        path: infra/helm/charts/blobe-services
+        helm:
+          valueFiles:
+            - '../../../../{{valuesFile}}'
+      destination:
+        server: '{{url}}'
+        namespace: blobe
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+        syncOptions:
+          - CreateNamespace=true
+          - ServerSideApply=true

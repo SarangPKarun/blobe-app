@@ -1,0 +1,15 @@
+global:
+  imageRegistry: ""          # ECR registry prefix, e.g. 123456789.dkr.ecr.us-east-1.amazonaws.com
+  imagePullPolicy: IfNotPresent
+  namespace: blobe
+  region: us-east-1
+  environment: production
+  kafka:
+    bootstrapServers: ""     # MSK bootstrap (SASL_SSL), filled per-env
+  database:
+    secretName: blobe-rds-url    # K8s Secret name (created by External Secrets Operator)
+  redis:
+    secretName: blobe-redis-url  # K8s Secret name
+  serviceAccount:
+    create: true
+    annotations: {}

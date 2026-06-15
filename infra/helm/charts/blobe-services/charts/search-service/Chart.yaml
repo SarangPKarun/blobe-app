@@ -1,0 +1,6 @@
+apiVersion: v2
+name: search-service
+version: 1.0.0
+description: Geo-aware search service (Go/Fiber + OpenSearch ES 8.x)
+type: application
+appVersion: "1.0.0"

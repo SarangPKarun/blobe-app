@@ -1,0 +1,50 @@
+replicaCount: 2
+
+kong:
+  image:
+    repository: kong
+    tag: "3.4"
+
+  proxy:
+    enabled: true
+    type: LoadBalancer
+    annotations:
+      service.beta.kubernetes.io/aws-load-balancer-type: "external"
+      service.beta.kubernetes.io/aws-load-balancer-nlb-target-type: "ip"
+      service.beta.kubernetes.io/aws-load-balancer-scheme: "internet-facing"
+    http:
+      enabled: true
+      servicePort: 80
+      containerPort: 8000
+    tls:
+      enabled: true
+      servicePort: 443
+      containerPort: 8443
+
+  admin:
+    enabled: true
+    type: ClusterIP
+    http:
+      enabled: true
+      servicePort: 8001
+      containerPort: 8001
+
+  env:
+    database: "off"
+    declarative_config: /opt/kong/kong.yml
+
+  resources:
+    requests:
+      cpu: 500m
+      memory: 512Mi
+    limits:
+      cpu: 1000m
+      memory: 1Gi
+
+  dblessConfig:
+    configMap: kong-config
+
+autoscaling:
+  minReplicas: 2
+  maxReplicas: 8
+  cpuUtilization: 70

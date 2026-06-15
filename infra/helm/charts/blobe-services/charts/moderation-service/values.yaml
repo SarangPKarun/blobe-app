@@ -1,0 +1,45 @@
+replicaCount: 1
+
+image:
+  repository: blobe/moderation-service
+  tag: latest
+  pullPolicy: IfNotPresent
+
+service:
+  port: 3007
+  type: ClusterIP
+
+serviceAccount:
+  roleArn: ""
+
+resources:
+  requests:
+    cpu: 500m
+    memory: 2Gi
+  limits:
+    cpu: 2000m
+    memory: 3Gi
+
+nodeSelector:
+  node-class: ml
+
+tolerations:
+  - key: ml-workload
+    operator: Equal
+    value: "true"
+    effect: NoSchedule
+
+env:
+  TEXT_HATE_THRESHOLD: "0.7"
+  TEXT_SPAM_THRESHOLD: "0.8"
+  NSFW_THRESHOLD: "0.7"
+  AUTO_APPROVE_CONFIDENCE: "0.95"
+  NSFW_BACKEND: "openai"
+  PHASH_DISTANCE_THRESHOLD: "10"
+  TEXT_MODEL_NAME: "Hate-speech-CNERG/dehatebert-mono-english"
+
+autoscaling:
+  minReplicas: 1
+  maxReplicas: 5
+  kafkaLagThreshold: "20"
+  cpuUtilization: 70

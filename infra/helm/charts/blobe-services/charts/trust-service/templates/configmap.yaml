@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "trust-service.fullname" . }}-config
+  labels:
+    {{- include "trust-service.labels" . | nindent 4 }}
+data:
+  PORT: "{{ .Values.service.port }}"
+  JURY_THRESHOLD: {{ .Values.env.JURY_THRESHOLD | quote }}
+  JURY_SIZE: {{ .Values.env.JURY_SIZE | quote }}

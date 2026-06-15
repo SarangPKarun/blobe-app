@@ -1,0 +1,27 @@
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: {{ .Release.Name }}
+  namespace: blobe
+spec:
+  scaleTargetRef:
+    name: {{ .Release.Name }}
+  minReplicaCount: {{ .Values.autoscaling.minReplicas }}
+  maxReplicaCount: {{ .Values.autoscaling.maxReplicas }}
+  pollingInterval: 15
+  cooldownPeriod: 60
+  triggers:
+    - type: kafka
+      metadata:
+        bootstrapServers: {{ .Values.global.kafka.bootstrapServers }}
+        consumerGroup: globe-service-group
+        topic: trust-votes
+        lagThreshold: {{ .Values.autoscaling.kafkaLagThreshold | quote }}
+        offsetResetPolicy: latest
+      authenticationRef:
+        name: keda-msk-iam-auth
+    - type: memory
+      metricType: Utilization
+      metadata:
+        type: Utilization
+        value: {{ .Values.autoscaling.memoryUtilization | quote }}

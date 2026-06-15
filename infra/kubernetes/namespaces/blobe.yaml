@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: blobe
+  labels:
+    istio-injection: enabled
+    kubernetes.io/metadata.name: blobe
+    pod-security.kubernetes.io/enforce: restricted
+    pod-security.kubernetes.io/warn: restricted

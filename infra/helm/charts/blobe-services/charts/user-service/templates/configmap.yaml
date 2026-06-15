@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-config
+  namespace: {{ .Values.global.namespace | default "blobe" }}
+data:
+  PORT: "3001"
+  NODE_ENV: production

@@ -1,0 +1,37 @@
+replicaCount: 1
+
+image:
+  repository: blobe/notification-service
+  tag: latest
+  pullPolicy: IfNotPresent
+
+service:
+  port: 3003
+  type: ClusterIP
+
+serviceAccount:
+  roleArn: ""
+
+resources:
+  requests:
+    cpu: 250m
+    memory: 256Mi
+  limits:
+    cpu: 500m
+    memory: 512Mi
+
+autoscaling:
+  minReplicas: 1
+  maxReplicas: 5
+  cooldownPeriod: 120
+  pollingInterval: 30
+  triggers:
+    - topic: posts
+      consumerGroup: notification-service-group
+      lagThreshold: "50"
+    - topic: payments
+      consumerGroup: notification-service-group
+      lagThreshold: "30"
+    - topic: chat.message
+      consumerGroup: notification-service-group
+      lagThreshold: "100"

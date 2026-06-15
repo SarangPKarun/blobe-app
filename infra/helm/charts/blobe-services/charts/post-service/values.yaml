@@ -1,0 +1,27 @@
+replicaCount: 2
+
+image:
+  repository: blobe/post-service
+  tag: latest
+  pullPolicy: IfNotPresent
+
+service:
+  port: 3002
+  type: ClusterIP
+
+serviceAccount:
+  roleArn: ""  # set per-env to IRSA ARN for S3 access
+
+resources:
+  requests:
+    cpu: 250m
+    memory: 256Mi
+  limits:
+    cpu: 500m
+    memory: 512Mi
+
+autoscaling:
+  minReplicas: 2
+  maxReplicas: 10
+  cpuUtilization: 70
+  memoryUtilization: 80

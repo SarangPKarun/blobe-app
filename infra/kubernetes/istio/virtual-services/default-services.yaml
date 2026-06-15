@@ -1,0 +1,140 @@
+---
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: user-service
+  namespace: blobe
+spec:
+  hosts:
+    - user-service.blobe.svc.cluster.local
+  http:
+    - route:
+        - destination:
+            host: user-service.blobe.svc.cluster.local
+            port:
+              number: 3001
+      timeout: 10s
+      retries:
+        attempts: 3
+        perTryTimeout: 3s
+        retryOn: gateway-error,connect-failure,retriable-4xx
+---
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: post-service
+  namespace: blobe
+spec:
+  hosts:
+    - post-service.blobe.svc.cluster.local
+  http:
+    - route:
+        - destination:
+            host: post-service.blobe.svc.cluster.local
+            port:
+              number: 3002
+      timeout: 10s
+      retries:
+        attempts: 3
+        perTryTimeout: 3s
+        retryOn: gateway-error,connect-failure,retriable-4xx
+---
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: notification-service
+  namespace: blobe
+spec:
+  hosts:
+    - notification-service.blobe.svc.cluster.local
+  http:
+    - route:
+        - destination:
+            host: notification-service.blobe.svc.cluster.local
+            port:
+              number: 3003
+      timeout: 10s
+      retries:
+        attempts: 3
+        perTryTimeout: 3s
+        retryOn: gateway-error,connect-failure,retriable-4xx
+---
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: search-service
+  namespace: blobe
+spec:
+  hosts:
+    - search-service.blobe.svc.cluster.local
+  http:
+    - route:
+        - destination:
+            host: search-service.blobe.svc.cluster.local
+            port:
+              number: 3006
+      timeout: 10s
+      retries:
+        attempts: 3
+        perTryTimeout: 3s
+        retryOn: gateway-error,connect-failure,retriable-4xx
+---
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: trust-service
+  namespace: blobe
+spec:
+  hosts:
+    - trust-service.blobe.svc.cluster.local
+  http:
+    - route:
+        - destination:
+            host: trust-service.blobe.svc.cluster.local
+            port:
+              number: 3007
+      timeout: 10s
+      retries:
+        attempts: 3
+        perTryTimeout: 3s
+        retryOn: gateway-error,connect-failure,retriable-4xx
+---
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: moderation-service
+  namespace: blobe
+spec:
+  hosts:
+    - moderation-service.blobe.svc.cluster.local
+  http:
+    - route:
+        - destination:
+            host: moderation-service.blobe.svc.cluster.local
+            port:
+              number: 3008
+      timeout: 10s
+      retries:
+        attempts: 3
+        perTryTimeout: 3s
+        retryOn: gateway-error,connect-failure,retriable-4xx
+---
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: payment-service
+  namespace: blobe
+spec:
+  hosts:
+    - payment-service.blobe.svc.cluster.local
+  http:
+    - route:
+        - destination:
+            host: payment-service.blobe.svc.cluster.local
+            port:
+              number: 3009
+      timeout: 10s
+      retries:
+        attempts: 3
+        perTryTimeout: 3s
+        retryOn: gateway-error,connect-failure,retriable-4xx

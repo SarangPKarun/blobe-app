@@ -1,0 +1,5 @@
+apiVersion: v2
+name: chat-service
+version: 1.0.0
+description: Node.js/Fastify + Socket.io chat service with sticky session support
+type: application

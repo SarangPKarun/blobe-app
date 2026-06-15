@@ -1,0 +1,17 @@
+is_primary_region              = false
+region                         = "eu-west-1"
+environment                    = "production"
+vpc_cidr                       = "10.1.0.0/16"
+azs                            = ["eu-west-1a", "eu-west-1b", "eu-west-1c"]
+public_subnets                 = ["10.1.1.0/24", "10.1.2.0/24", "10.1.3.0/24"]
+private_subnets                = ["10.1.11.0/24", "10.1.12.0/24", "10.1.13.0/24"]
+data_subnets                   = ["10.1.21.0/24", "10.1.22.0/24", "10.1.23.0/24"]
+rds_instance_class             = "db.r6g.xlarge"
+rds_replica_instance_class     = "db.r6g.xlarge"
+redis_node_type                = "cache.r7g.large"
+redis_num_node_groups          = 2
+msk_broker_count               = 3
+msk_broker_instance_type       = "kafka.m5.large"
+general_node_group_max         = 8
+opensearch_data_instance_type  = "r6g.xlarge.search"
+opensearch_data_instance_count = 3

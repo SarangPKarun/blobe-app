@@ -1,0 +1,31 @@
+replicaCount: 3
+
+image:
+  repository: blobe/globe-service
+  tag: latest
+
+service:
+  port: 3004
+  type: ClusterIP
+
+serviceAccount:
+  roleArn: ""  # set per-env to IRSA ARN
+
+resources:
+  requests:
+    cpu: 250m
+    memory: 512Mi
+  limits:
+    cpu: 1000m
+    memory: 1Gi
+
+env:
+  ML_ENABLED: "true"
+  ML_BLEND_WEIGHT: "0.7"
+  SAGEMAKER_TIMEOUT_MS: "80"
+
+autoscaling:
+  minReplicas: 3
+  maxReplicas: 20
+  kafkaLagThreshold: "100"
+  memoryUtilization: 75

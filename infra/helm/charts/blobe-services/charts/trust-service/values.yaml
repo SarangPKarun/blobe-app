@@ -1,0 +1,30 @@
+replicaCount: 1
+
+image:
+  repository: blobe/trust-service
+  tag: latest
+  pullPolicy: IfNotPresent
+
+service:
+  port: 3006
+  type: ClusterIP
+
+serviceAccount:
+  roleArn: ""
+
+resources:
+  requests:
+    cpu: 250m
+    memory: 256Mi
+  limits:
+    cpu: 500m
+    memory: 512Mi
+
+env:
+  JURY_THRESHOLD: "5.0"
+  JURY_SIZE: "5"
+
+autoscaling:
+  minReplicas: 1
+  maxReplicas: 5
+  cpuUtilization: 70

@@ -1,0 +1,25 @@
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: {{ .Release.Name }}
+  namespace: {{ .Values.global.namespace | default "blobe" }}
+  labels:
+    app: {{ .Release.Name }}
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: {{ .Release.Name }}
+  minReplicaCount: {{ .Values.autoscaling.minReplicas }}
+  maxReplicaCount: {{ .Values.autoscaling.maxReplicas }}
+  pollingInterval: {{ .Values.autoscaling.pollingInterval }}
+  cooldownPeriod: {{ .Values.autoscaling.cooldownPeriod }}
+  triggers:
+    {{- range .Values.autoscaling.triggers }}
+    - type: kafka
+      metadata:
+        topic: {{ .topic }}
+        consumerGroup: {{ .consumerGroup }}
+        lagThreshold: {{ .lagThreshold | quote }}
+        bootstrapServers: ""
+    {{- end }}

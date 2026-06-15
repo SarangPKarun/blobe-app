@@ -1,0 +1,6 @@
+apiVersion: v2
+name: post-service
+version: 1.0.0
+description: Post creation and feed service (Node.js/Fastify)
+type: application
+appVersion: "1.0.0"

@@ -1,0 +1,6 @@
+apiVersion: v2
+name: notification-service
+version: 1.0.0
+description: Node.js/Fastify notification service with KEDA Kafka-lag autoscaling
+type: application
+appVersion: "1.0.0"
