@@ -5,3 +5,4 @@ asyncpg>=0.29
 aiokafka>=0.10
 pydantic-settings>=2.2
 python-jose[cryptography]>=3.3
+sentry-sdk[fastapi]>=2.0

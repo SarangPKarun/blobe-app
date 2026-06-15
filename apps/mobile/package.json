@@ -29,6 +29,7 @@
     "react-native-vector-icons": "^10.3.0",
     "react-native-webview": "^13.16.1",
     "react-native-keychain": "^9.2.2",
+    "@sentry/react-native": "^6.x",
     "socket.io-client": "^4.7.5",
     "libsodium-wrappers": "^0.7.15"
   },

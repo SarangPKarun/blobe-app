@@ -93,3 +93,15 @@ CI/CD — GitHub Actions + ArgoCD + Flagger
 5. **Auto-rollback**: Inject an error in the canary pod → verify Flagger rolls back before reaching 20%.
 6. **Mobile OTA**: Push a JS-only change → verify `eas update` runs without `eas build`.
 7. **Mobile native**: Push a change under `apps/mobile/android/` → verify `eas build` + `eas submit` run.
+
+
+Observability + launch readiness
+
+## Verification
+
+1. **Grafana**: After Wave 2–3 deploy, open Grafana and confirm all four dashboards load with data. WS connection gauge shows live value; Kafka lag shows 0 or near-0 for healthy consumers.
+2. **Jaeger**: Send a request through Kong → user-service. Open Jaeger UI, search for service `user-service`, confirm trace appears with `X-B3-TraceId` matching the Kong-assigned ID.
+3. **PagerDuty**: Use `amtool alert add` to fire a test alert against AlertManager and confirm PagerDuty incident is created.
+4. **Sentry**: Force an unhandled error in a Node.js service (e.g., throw from a route handler in staging), confirm event appears in Sentry with correct service tag and release.
+5. **GDPR test**: Run `k6 run infra/k6/gdpr-deletion-test.js --env BASE_URL=https://staging.blobe.app` and confirm all checks pass.
+6. **App Store**: Run `eas build --platform ios --profile production` and confirm build succeeds. Submit via `eas submit --platform ios` and confirm no privacy manifest rejection from App Store Connect.

@@ -1,3 +1,5 @@
+import './instrument';
+import { registerSentryFastify } from './instrument';
 import Fastify from 'fastify';
 import { ZodTypeProvider, serializerCompiler, validatorCompiler } from 'fastify-type-provider-zod';
 import cors from '@fastify/cors';
@@ -11,6 +13,7 @@ import { connectKafkaProducer, disconnectKafka } from './services/kafka';
 const fastify = Fastify({ logger: true }).withTypeProvider<ZodTypeProvider>();
 fastify.setValidatorCompiler(validatorCompiler);
 fastify.setSerializerCompiler(serializerCompiler);
+registerSentryFastify(fastify);
 
 fastify.register(cors, { origin: '*' });
 fastify.register(authPlugin);

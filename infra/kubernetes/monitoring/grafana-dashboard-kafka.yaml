@@ -1,0 +1,74 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboard-blobe-kafka
+  namespace: monitoring
+  labels:
+    grafana_dashboard: "1"
+data:
+  blobe-kafka.json: |
+    {
+      "title": "Blobe — Kafka Consumer Lag",
+      "uid": "blobe-kafka",
+      "schemaVersion": 39,
+      "refresh": "30s",
+      "time": {"from": "now-3h", "to": "now"},
+      "panels": [
+        {
+          "id": 1,
+          "title": "Globe Service — Kafka Lag by Topic",
+          "type": "timeseries",
+          "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0},
+          "targets": [
+            {"expr": "globe_kafka_consumer_lag", "legendFormat": "{{topic}} ({{group}})"}
+          ],
+          "fieldConfig": {
+            "defaults": {"unit": "short", "thresholds": {"steps": [{"color": "green", "value": null}, {"color": "yellow", "value": 100}, {"color": "red", "value": 1000}]}}
+          }
+        },
+        {
+          "id": 2,
+          "title": "Search Service — Kafka Lag",
+          "type": "timeseries",
+          "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0},
+          "targets": [
+            {"expr": "search_kafka_consumer_lag", "legendFormat": "{{topic}} ({{group}})"}
+          ],
+          "fieldConfig": {
+            "defaults": {"unit": "short", "thresholds": {"steps": [{"color": "green", "value": null}, {"color": "yellow", "value": 100}, {"color": "red", "value": 1000}]}}
+          }
+        },
+        {
+          "id": 3,
+          "title": "Globe Messages Processed Rate",
+          "type": "timeseries",
+          "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8},
+          "targets": [
+            {"expr": "rate(globe_kafka_messages_processed_total[5m]) * 60", "legendFormat": "globe/{{topic}} msgs/min"}
+          ],
+          "fieldConfig": {"defaults": {"unit": "short"}}
+        },
+        {
+          "id": 4,
+          "title": "Search Messages Processed Rate",
+          "type": "timeseries",
+          "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8},
+          "targets": [
+            {"expr": "rate(search_kafka_messages_processed_total[5m]) * 60", "legendFormat": "search/{{topic}} msgs/min"}
+          ],
+          "fieldConfig": {"defaults": {"unit": "short"}}
+        },
+        {
+          "id": 5,
+          "title": "Search ES Index Errors",
+          "type": "stat",
+          "gridPos": {"h": 4, "w": 6, "x": 0, "y": 16},
+          "targets": [
+            {"expr": "increase(search_es_index_errors_total[1h])", "legendFormat": "errors (1h)"}
+          ],
+          "fieldConfig": {
+            "defaults": {"unit": "short", "thresholds": {"steps": [{"color": "green", "value": null}, {"color": "red", "value": 1}]}}
+          }
+        }
+      ]
+    }

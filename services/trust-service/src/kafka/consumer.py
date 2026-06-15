@@ -4,10 +4,11 @@ import logging
 from datetime import datetime
 
 from aiokafka import AIOKafkaConsumer
+from sqlalchemy import delete
 
 from ..config import settings
 from ..database import SessionLocal
-from ..models import TrustAuditLog
+from ..models import TrustAuditLog, TrustScore, Vote
 
 logger = logging.getLogger(__name__)
 
@@ -18,13 +19,14 @@ async def _run_consumer() -> None:
     consumer = AIOKafkaConsumer(
         "trust-votes",
         "moderation",
+        "user.deleted",
         bootstrap_servers=settings.kafka_broker,
         group_id="trust-service-group",
         auto_offset_reset="latest",
         value_deserializer=lambda v: json.loads(v.decode()),
     )
     await consumer.start()
-    logger.info("Kafka consumer started on trust-votes, moderation")
+    logger.info("Kafka consumer started on trust-votes, moderation, user.deleted")
     try:
         async for msg in consumer:
             await _handle_message(msg.topic, msg.value)
@@ -42,6 +44,8 @@ async def _handle_message(topic: str, raw: dict) -> None:
         await _handle_vote(payload)
     elif topic == "moderation":
         await _handle_moderation(payload)
+    elif topic == "user.deleted":
+        await _handle_user_deleted(payload)
 
 
 async def _handle_vote(payload: dict) -> None:
@@ -77,6 +81,20 @@ async def _handle_moderation(payload: dict) -> None:
             await db.commit()
     except Exception:
         logger.exception("Failed to write audit log for moderation message")
+
+
+async def _handle_user_deleted(payload: dict) -> None:
+    user_id: str = payload.get("id", "")
+    if not user_id:
+        return
+    try:
+        async with SessionLocal() as db:
+            await db.execute(delete(TrustScore).where(TrustScore.userId == user_id))
+            await db.execute(delete(Vote).where(Vote.userId == user_id))
+            await db.commit()
+        logger.info("GDPR: deleted trust data for user %s", user_id)
+    except Exception:
+        logger.exception("Failed to delete trust data for user %s", user_id)
 
 
 async def start_consumer() -> None:

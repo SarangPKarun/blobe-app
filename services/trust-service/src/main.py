@@ -1,8 +1,11 @@
 import logging
 from contextlib import asynccontextmanager
 
+import sentry_sdk
 import uvicorn
 from fastapi import FastAPI
+from sentry_sdk.integrations.fastapi import FastApiIntegration
+from sentry_sdk.integrations.sqlalchemy import SqlalchemyIntegration
 
 from .config import settings
 from .database import create_tables
@@ -12,6 +15,15 @@ from .routes import appeals, trust, votes
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+if settings.sentry_dsn:
+    sentry_sdk.init(
+        dsn=settings.sentry_dsn,
+        environment=settings.sentry_environment,
+        server_name="trust-service",
+        traces_sample_rate=0.1,
+        integrations=[FastApiIntegration(), SqlalchemyIntegration()],
+    )
 
 
 @asynccontextmanager

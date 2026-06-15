@@ -42,6 +42,13 @@ spec:
                 secretKeyRef:
                   name: {{ include "trust-service.fullname" . }}-secrets
                   key: KAFKA_BROKER
+            - name: SENTRY_DSN
+              valueFrom:
+                secretKeyRef:
+                  name: blobe-sentry-dsn
+                  key: dsn
+            - name: SENTRY_ENVIRONMENT
+              value: {{ .Values.global.environment | default "production" | quote }}
           livenessProbe:
             httpGet:
               path: /health

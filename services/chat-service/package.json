@@ -1,7 +1,7 @@
 {
   "name": "@blobe/chat-service",
   "version": "1.0.0",
-  "description": "Chat Service — real-time messaging with Socket.io",
+  "description": "Chat Service \u2014 real-time messaging with Socket.io",
   "main": "dist/server.js",
   "scripts": {
     "dev": "tsx watch src/server.ts",
@@ -20,7 +20,8 @@
     "ioredis": "^5.3.2",
     "kafkajs": "^2.2.4",
     "socket.io": "^4.7.5",
-    "zod": "^3.22.4"
+    "zod": "^3.22.4",
+    "@blobe/telemetry": "*"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",

@@ -8,6 +8,8 @@ class Settings(BaseSettings):
     database_url: str = "postgresql+asyncpg://postgres:postgrespassword@localhost:5432/blobe"
     kafka_broker: str = "localhost:9092"
     jwt_secret: str = "super-secret-default-key-for-dev"
+    sentry_dsn: str = ""
+    sentry_environment: str = "production"
 
     # Classifier thresholds
     text_hate_threshold: float = 0.7

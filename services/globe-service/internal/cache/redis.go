@@ -77,3 +77,27 @@ func (c *Cache) InvalidateBanners(ctx context.Context, geohash string) error {
 	}
 	return c.client.Del(ctx, keys...).Err()
 }
+
+// FlushAllBanners deletes every globe:banners:* key. Called on user deletion so that
+// cells containing the deleted user's posts are immediately evicted; they rebuild
+// from DB (which no longer includes the deleted user) on the next client request.
+func (c *Cache) FlushAllBanners(ctx context.Context) error {
+	var cursor uint64
+	for {
+		var keys []string
+		var err error
+		keys, cursor, err = c.client.Scan(ctx, cursor, "globe:banners:*", 100).Result()
+		if err != nil {
+			return err
+		}
+		if len(keys) > 0 {
+			if err := c.client.Del(ctx, keys...).Err(); err != nil {
+				return err
+			}
+		}
+		if cursor == 0 {
+			break
+		}
+	}
+	return nil
+}

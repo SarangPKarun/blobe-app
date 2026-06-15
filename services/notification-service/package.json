@@ -1,7 +1,7 @@
 {
   "name": "@blobe/notification-service",
   "version": "1.0.0",
-  "description": "Notification Service — push, in-app, and email",
+  "description": "Notification Service \u2014 push, in-app, and email",
   "main": "dist/server.js",
   "scripts": {
     "dev": "tsx watch src/server.ts",
@@ -20,7 +20,8 @@
     "firebase-admin": "^12.0.0",
     "ioredis": "^5.11.1",
     "kafkajs": "^2.2.4",
-    "zod": "^3.22.4"
+    "zod": "^3.22.4",
+    "@blobe/telemetry": "*"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",

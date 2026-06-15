@@ -1,3 +1,5 @@
+import './instrument';
+import { registerSentryFastify } from './instrument';
 import Fastify from 'fastify';
 import { ZodTypeProvider, serializerCompiler, validatorCompiler } from 'fastify-type-provider-zod';
 
@@ -8,6 +10,7 @@ import { connectKafka, disconnectKafka } from './services/kafka';
 const server = Fastify({
   logger: true,
 }).withTypeProvider<ZodTypeProvider>();
+registerSentryFastify(server);
 
 server.setValidatorCompiler(validatorCompiler);
 server.setSerializerCompiler(serializerCompiler);

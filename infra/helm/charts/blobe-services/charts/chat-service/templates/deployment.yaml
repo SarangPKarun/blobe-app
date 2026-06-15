@@ -47,6 +47,11 @@ spec:
                 secretKeyRef:
                   name: {{ include "chat-service.fullname" . }}-secrets
                   key: KAFKA_BROKER
+            - name: SENTRY_DSN
+              valueFrom:
+                secretKeyRef:
+                  name: blobe-sentry-dsn
+                  key: dsn
           livenessProbe:
             httpGet:
               path: /health

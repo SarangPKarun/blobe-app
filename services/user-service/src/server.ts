@@ -1,3 +1,5 @@
+import './instrument';
+import { registerSentryFastify } from './instrument';
 import Fastify from 'fastify';
 import { TypeBoxTypeProvider } from '@fastify/type-provider-typebox';
 import { serializerCompiler, validatorCompiler } from 'fastify-type-provider-zod';
@@ -6,10 +8,12 @@ import authPlugin from './plugins/auth';
 import userRoutes from './routes/users';
 import followRoutes from './routes/follows';
 import blockRoutes from './routes/blocks';
+import { connectKafka, disconnectKafka } from './services/kafka';
 
 const server = Fastify({
   logger: true,
 }).withTypeProvider<TypeBoxTypeProvider>();
+registerSentryFastify(server);
 
 server.setValidatorCompiler(validatorCompiler);
 server.setSerializerCompiler(serializerCompiler);
@@ -31,11 +35,21 @@ export const buildServer = () => {
 };
 
 if (require.main === module) {
-  server.listen({ port: 3001, host: '0.0.0.0' }, (err, address) => {
+  server.listen({ port: 3001, host: '0.0.0.0' }, async (err, address) => {
     if (err) {
       console.error(err);
       process.exit(1);
     }
+    await connectKafka();
     console.log(`Server listening at ${address}`);
   });
+
+  const shutdown = async () => {
+    await disconnectKafka();
+    await server.close();
+    process.exit(0);
+  };
+
+  process.on('SIGTERM', shutdown);
+  process.on('SIGINT', shutdown);
 }

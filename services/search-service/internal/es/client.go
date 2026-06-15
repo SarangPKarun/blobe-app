@@ -136,6 +136,30 @@ func (c *Client) IndexPost(ctx context.Context, doc PostDoc) error {
 	return nil
 }
 
+// DeleteByAuthor removes all posts (and their suggest entries) indexed for a given authorId.
+// Used for GDPR right-to-erasure when a user account is deleted.
+func (c *Client) DeleteByAuthor(ctx context.Context, authorID string) error {
+	query := map[string]any{
+		"query": map[string]any{
+			"term": map[string]any{"author_id": authorID},
+		},
+	}
+	body, _ := json.Marshal(query)
+
+	for _, idx := range []string{indexPosts, indexSuggest} {
+		res, err := c.es.DeleteByQuery(
+			[]string{idx},
+			bytes.NewReader(body),
+			c.es.DeleteByQuery.WithContext(ctx),
+		)
+		if err != nil {
+			return fmt.Errorf("delete_by_query %s for author %s: %w", idx, authorID, err)
+		}
+		_ = res.Body.Close()
+	}
+	return nil
+}
+
 // buildSuggestInputs returns prefix tokens for completion: ["foo", "foo bar", "foo bar baz"].
 func buildSuggestInputs(words []string) []string {
 	var inputs []string

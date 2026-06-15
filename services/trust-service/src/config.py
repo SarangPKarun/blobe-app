@@ -10,6 +10,8 @@ class Settings(BaseSettings):
     jwt_secret: str = "super-secret-default-key-for-dev"
     jury_threshold: float = 5.0
     jury_size: int = 5
+    sentry_dsn: str = ""
+    sentry_environment: str = "production"
 
 
 settings = Settings()

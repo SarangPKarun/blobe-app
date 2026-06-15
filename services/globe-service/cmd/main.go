@@ -11,12 +11,15 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/logger"
 	"github.com/gofiber/fiber/v2/middleware/recover"
 	fiberws "github.com/gofiber/websocket/v2"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"github.com/valyala/fasthttp/fasthttpadaptor"
 
 	"github.com/blobeNative/globe-service/internal/cache"
 	"github.com/blobeNative/globe-service/internal/config"
 	"github.com/blobeNative/globe-service/internal/db"
 	"github.com/blobeNative/globe-service/internal/handler"
 	kafkaconsumer "github.com/blobeNative/globe-service/internal/kafka"
+	"github.com/blobeNative/globe-service/internal/metrics"
 	"github.com/blobeNative/globe-service/internal/ranking"
 	"github.com/blobeNative/globe-service/internal/spatial"
 	"github.com/blobeNative/globe-service/internal/ws"
@@ -47,11 +50,16 @@ func main() {
 
 	// --- WebSocket hub ---
 	hub := ws.NewHub()
+	hub.DisconnectInc = metrics.WSDisconnections.Inc
 
 	// --- Kafka consumer ---
 	consumer := kafkaconsumer.New(cfg.KafkaBroker, database, redisCache, quadtree, hub)
 	consumer.Start(ctx)
 	defer consumer.Close()
+
+	// --- Prometheus metrics ---
+	metrics.RegisterWSConnectionsGauge(hub.ConnCount)
+	metrics.StartKafkaLagPoller(ctx, consumer.PostReader(), consumer.VoteReader())
 
 	// --- Kafka producer (globe-events) ---
 	producer := kafkaconsumer.NewProducer(cfg.KafkaBroker)
@@ -81,6 +89,12 @@ func main() {
 
 	app.Get("/health", func(c *fiber.Ctx) error {
 		return c.JSON(fiber.Map{"status": "ok"})
+	})
+
+	promHandler := fasthttpadaptor.NewFastHTTPHandler(promhttp.Handler())
+	app.Get("/metrics", func(c *fiber.Ctx) error {
+		promHandler(c.Context())
+		return nil
 	})
 
 	// --- Graceful shutdown ---

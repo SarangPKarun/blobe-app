@@ -3864,4 +3864,7 @@ void main() {
 <body>
   <div id="error-box"></div>
 </body>
+<script>
+(function(){var fc=0,lt=performance.now(),orig=window.requestAnimationFrame.bind(window);window.requestAnimationFrame=function(cb){return orig(function(ts){fc++;var now=performance.now();if(now-lt>=5000){var fps=Math.round(fc*1000/(now-lt));fc=0;lt=now;if(window.ReactNativeWebView)window.ReactNativeWebView.postMessage(JSON.stringify({type:'GLOBE_TELEMETRY',payload:{fps:fps}}));}cb(ts);});};})();
+</script>
 </html>

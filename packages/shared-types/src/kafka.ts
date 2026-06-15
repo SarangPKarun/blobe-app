@@ -35,6 +35,12 @@ export interface PaymentCreatedPayload {
   createdAt: string;
 }
 
+export interface UserDeletedPayload {
+  id: string;
+  deletedAt: string;
+}
+
 export type PostCreatedEvent      = KafkaEvent<PostCreatedPayload>;
 export type TrustVoteCreatedEvent = KafkaEvent<TrustVoteCreatedPayload>;
 export type PaymentCreatedEvent   = KafkaEvent<PaymentCreatedPayload>;
+export type UserDeletedEvent      = KafkaEvent<UserDeletedPayload>;

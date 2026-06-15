@@ -7,3 +7,5 @@ metadata:
 data:
   PORT: "3009"
   CORS_ORIGIN: "https://blobe.app"
+  SENTRY_ENVIRONMENT: {{ .Values.global.environment | default "production" | quote }}
+  SENTRY_RELEASE: {{ .Values.image.tag | default "unknown" | quote }}

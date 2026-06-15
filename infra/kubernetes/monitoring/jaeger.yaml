@@ -1,0 +1,54 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: jaeger-operator
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "-5"
+spec:
+  project: default
+  source:
+    repoURL: https://jaegertracing.github.io/helm-charts
+    chart: jaeger-operator
+    targetRevision: 2.51.0
+    helm:
+      values: |
+        rbac:
+          clusterRole: true
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: monitoring
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+---
+apiVersion: jaegertracing.io/v1
+kind: Jaeger
+metadata:
+  name: jaeger
+  namespace: monitoring
+spec:
+  strategy: production
+  collector:
+    maxReplicas: 2
+    resources:
+      limits:
+        cpu: 500m
+        memory: 512Mi
+  query:
+    replicas: 1
+    resources:
+      limits:
+        cpu: 250m
+        memory: 256Mi
+  storage:
+    type: elasticsearch
+    options:
+      es:
+        server-urls: http://elasticsearch.blobe.svc.cluster.local:9200
+        index-prefix: jaeger
+  ingress:
+    enabled: false

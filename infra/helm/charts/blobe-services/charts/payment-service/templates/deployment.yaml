@@ -53,6 +53,11 @@ spec:
                 secretKeyRef:
                   name: blobe-stripe-webhook-secret
                   key: secret
+            - name: SENTRY_DSN
+              valueFrom:
+                secretKeyRef:
+                  name: blobe-sentry-dsn
+                  key: dsn
           livenessProbe:
             httpGet:
               path: /health

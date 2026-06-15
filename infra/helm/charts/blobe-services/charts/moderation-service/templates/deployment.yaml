@@ -51,6 +51,13 @@ spec:
                 secretKeyRef:
                   name: blobe-openai-key
                   key: key
+            - name: SENTRY_DSN
+              valueFrom:
+                secretKeyRef:
+                  name: blobe-sentry-dsn
+                  key: dsn
+            - name: SENTRY_ENVIRONMENT
+              value: {{ .Values.global.environment | default "production" | quote }}
           livenessProbe:
             httpGet:
               path: /health

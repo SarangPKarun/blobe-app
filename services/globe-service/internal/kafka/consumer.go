@@ -10,11 +10,16 @@ import (
 
 	"github.com/blobeNative/globe-service/internal/cache"
 	"github.com/blobeNative/globe-service/internal/db"
+	"github.com/blobeNative/globe-service/internal/metrics"
 	"github.com/blobeNative/globe-service/internal/ranking"
 	"github.com/blobeNative/globe-service/internal/spatial"
 	"github.com/blobeNative/globe-service/internal/ws"
 	"github.com/mmcloughlin/geohash"
 )
+
+type userDeletedPayload struct {
+	ID string `json:"id"`
+}
 
 type postCreatedPayload struct {
 	ID        string  `json:"id"`
@@ -43,12 +48,13 @@ type trustVotePayload struct {
 
 // Consumer wires Kafka topics to re-rank logic.
 type Consumer struct {
-	postReader  *kgo.Reader
-	voteReader  *kgo.Reader
-	db          *db.DB
-	cache       *cache.Cache
-	quadtree    *spatial.Tree
-	hub         *ws.Hub
+	postReader    *kgo.Reader
+	voteReader    *kgo.Reader
+	deletedReader *kgo.Reader
+	db            *db.DB
+	cache         *cache.Cache
+	quadtree      *spatial.Tree
+	hub           *ws.Hub
 }
 
 func New(broker string, database *db.DB, c *cache.Cache, qt *spatial.Tree, hub *ws.Hub) *Consumer {
@@ -69,6 +75,14 @@ func New(broker string, database *db.DB, c *cache.Cache, qt *spatial.Tree, hub *
 			MinBytes: 1,
 			MaxBytes: 1 << 20,
 		}),
+		deletedReader: kgo.NewReader(kgo.ReaderConfig{
+			Brokers:  []string{broker},
+			GroupID:  "globe-service-group",
+			Topic:    "user.deleted",
+			MaxWait:  500 * time.Millisecond,
+			MinBytes: 1,
+			MaxBytes: 1 << 20,
+		}),
 		db:       database,
 		cache:    c,
 		quadtree: qt,
@@ -79,12 +93,20 @@ func New(broker string, database *db.DB, c *cache.Cache, qt *spatial.Tree, hub *
 func (c *Consumer) Start(ctx context.Context) {
 	go c.consumePosts(ctx)
 	go c.consumeVotes(ctx)
+	go c.consumeUserDeleted(ctx)
 }
 
 func (c *Consumer) Close() {
 	c.postReader.Close()
 	c.voteReader.Close()
+	c.deletedReader.Close()
 }
+
+// PostReader exposes the underlying kafka-go Reader for metrics polling.
+func (c *Consumer) PostReader() *kgo.Reader { return c.postReader }
+
+// VoteReader exposes the underlying kafka-go Reader for metrics polling.
+func (c *Consumer) VoteReader() *kgo.Reader { return c.voteReader }
 
 func (c *Consumer) consumePosts(ctx context.Context) {
 	for {
@@ -107,6 +129,7 @@ func (c *Consumer) consumePosts(ctx context.Context) {
 			continue
 		}
 
+		metrics.MessagesProcessed.WithLabelValues("posts").Inc()
 		c.reRankForLocation(ctx, p.Latitude, p.Longitude)
 	}
 }
@@ -128,6 +151,7 @@ func (c *Consumer) consumeVotes(ctx context.Context) {
 			continue
 		}
 
+		metrics.MessagesProcessed.WithLabelValues("trust-votes").Inc()
 		// Fetch the post's location then re-rank its cells.
 		row, err := c.db.QueryPostLocation(ctx, v.PostID)
 		if err != nil {
@@ -135,6 +159,30 @@ func (c *Consumer) consumeVotes(ctx context.Context) {
 			continue
 		}
 		c.reRankForLocation(ctx, row.Lat, row.Lon)
+	}
+}
+
+func (c *Consumer) consumeUserDeleted(ctx context.Context) {
+	for {
+		msg, err := c.deletedReader.ReadMessage(ctx)
+		if err != nil {
+			if ctx.Err() != nil {
+				return
+			}
+			log.Printf("kafka user.deleted read error: %v", err)
+			continue
+		}
+		var p userDeletedPayload
+		if err := json.Unmarshal(msg.Value, &p); err != nil {
+			log.Printf("kafka user.deleted decode error: %v", err)
+			continue
+		}
+		if err := c.cache.FlushAllBanners(ctx); err != nil {
+			log.Printf("GDPR flush banners for user %s error: %v", p.ID, err)
+		} else {
+			log.Printf("GDPR: flushed banner cache for deleted user %s", p.ID)
+		}
+		metrics.MessagesProcessed.WithLabelValues("user.deleted").Inc()
 	}
 }
 

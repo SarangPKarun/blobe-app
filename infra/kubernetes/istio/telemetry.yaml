@@ -1,0 +1,33 @@
+apiVersion: telemetry.istio.io/v1alpha1
+kind: Telemetry
+metadata:
+  name: tracing-blobe
+  namespace: blobe
+spec:
+  tracing:
+    - providers:
+        - name: jaeger
+      # 100% during launch; tune down to ~10% after stabilisation
+      randomSamplingPercentage: 100.0
+---
+# MeshConfig extension to register the Jaeger provider
+# Applied as an IstioOperator overlay or via istiod configmap patch
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: istio-mesh-config-tracing
+  namespace: istio-system
+  annotations:
+    # This ConfigMap documents the required istiod MeshConfig patch.
+    # Apply via: kubectl patch configmap istio -n istio-system --patch-file this-file.yaml
+    # Or add to IstioOperator spec.meshConfig.extensionProviders in your Terraform/Helm Istio values.
+    note: "See docs/runbooks/jaeger-setup.md for IstioOperator extensionProviders patch"
+data:
+  patch: |
+    meshConfig:
+      extensionProviders:
+        - name: jaeger
+          zipkin:
+            service: jaeger-collector.monitoring.svc.cluster.local
+            port: 9411
+            maxTagLength: 256

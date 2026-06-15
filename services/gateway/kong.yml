@@ -230,6 +230,14 @@ plugins:
       generator: uuid
       echo_downstream: true
 
+  # B3 trace header — injected by Kong so Jaeger can correlate spans end-to-end
+  - name: correlation-id
+    instance_name: b3-trace-id
+    config:
+      header_name: X-B3-TraceId
+      generator: uuid
+      echo_downstream: true
+
   # CORS — open for all origins in dev; tighten per-route in production
   - name: cors
     config:
@@ -246,8 +254,10 @@ plugins:
         - Authorization
         - Content-Type
         - X-Request-ID
+        - X-B3-TraceId
       exposed_headers:
         - X-Request-ID
+        - X-B3-TraceId
       preflight_continue: false
       max_age: 3600
 

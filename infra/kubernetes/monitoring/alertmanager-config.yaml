@@ -1,0 +1,31 @@
+apiVersion: monitoring.coreos.com/v1alpha1
+kind: AlertmanagerConfig
+metadata:
+  name: blobe-pagerduty
+  namespace: monitoring
+  labels:
+    alertmanagerConfig: blobe
+spec:
+  receivers:
+    - name: pagerduty-critical
+      pagerdutyConfigs:
+        - serviceKey:
+            name: blobe-pagerduty-routing-key
+            key: key
+          severity: critical
+          details:
+            - key: environment
+              value: production
+            - key: cluster
+              value: blobe-eks-us-east-1
+  route:
+    receiver: pagerduty-critical
+    groupBy:
+      - alertname
+      - service
+    groupWait: 30s
+    groupInterval: 5m
+    repeatInterval: 1h
+    matchers:
+      - name: severity
+        value: critical

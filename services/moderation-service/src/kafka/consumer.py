@@ -7,6 +7,8 @@ from datetime import datetime
 
 from aiokafka import AIOKafkaConsumer
 
+from sqlalchemy import update
+
 from ..classifiers.image import classify_image_nsfw, download_image
 from ..classifiers.phash import check_phash
 from ..classifiers.text import classify_text
@@ -135,24 +137,46 @@ async def _handle_post(payload: dict) -> None:
             _log.exception("Failed to write ModerationRecord for post %s: %s", post_id, exc)
 
 
+async def _handle_user_deleted(payload: dict) -> None:
+    user_id: str = payload.get("id", "")
+    if not user_id:
+        return
+    try:
+        async with SessionLocal() as db:
+            # Cancel all HELD queue items for deleted user's posts — they no longer exist.
+            await db.execute(
+                update(ModerationRecord)
+                .where(ModerationRecord.authorId == user_id, ModerationRecord.status == "HELD")
+                .values(status="CANCELLED")
+            )
+            await db.commit()
+        _log.info("GDPR: cancelled HELD moderation records for user %s", user_id)
+    except Exception:
+        _log.exception("Failed to cancel moderation records for user %s", user_id)
+
+
 async def _run_consumer() -> None:
     consumer = AIOKafkaConsumer(
         "posts",
+        "user.deleted",
         bootstrap_servers=settings.kafka_broker,
         group_id="moderation-service-group",
         auto_offset_reset="latest",
         value_deserializer=lambda v: json.loads(v.decode()),
     )
     await consumer.start()
-    _log.info("Kafka consumer started on posts")
+    _log.info("Kafka consumer started on posts, user.deleted")
     try:
         async for msg in consumer:
             raw: dict = msg.value
             payload: dict = raw.get("payload", raw)
             try:
-                await _handle_post(payload)
+                if msg.topic == "user.deleted":
+                    await _handle_user_deleted(payload)
+                else:
+                    await _handle_post(payload)
             except Exception:
-                _log.exception("Unhandled error processing post message")
+                _log.exception("Unhandled error processing %s message", msg.topic)
     except asyncio.CancelledError:
         pass
     finally:

@@ -1,3 +1,4 @@
+import * as Sentry from '@sentry/react-native';
 import React, {
   createContext,
   useCallback,
@@ -117,6 +118,10 @@ function GlobeProviderInner({ children }: { children: React.ReactNode }) {
 
           case 'CAMERA_MOVED':
             cameraStateRef.current = msg.payload;
+            break;
+
+          case 'GLOBE_TELEMETRY':
+            Sentry.setMeasurement('globe.fps', (msg.payload as { fps: number }).fps, 'none');
             break;
 
           case 'REGION_CHANGED': {

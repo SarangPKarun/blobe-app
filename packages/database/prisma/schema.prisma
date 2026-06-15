@@ -139,10 +139,11 @@ model Payment {
   id                    String    @id @default(uuid())
   createdAt             DateTime  @default(now())
   updatedAt             DateTime  @updatedAt
-  senderId              String
-  recipientId           String
-  sender                User      @relation("SentPayments",     fields: [senderId],    references: [id])
-  recipient             User      @relation("ReceivedPayments", fields: [recipientId], references: [id])
+  // Nullable for GDPR anonymisation: set to null when the user account is deleted.
+  senderId              String?
+  recipientId           String?
+  sender                User?     @relation("SentPayments",     fields: [senderId],    references: [id])
+  recipient             User?     @relation("ReceivedPayments", fields: [recipientId], references: [id])
   amount                Int
   currency              String    @default("usd")
   status                String    @default("pending")
@@ -251,4 +252,16 @@ model UserPublicKey {
   publicKey String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+// Audit trail for GDPR right-to-erasure requests.
+// Intentionally has NO foreign key to User so the record survives after deletion.
+model UserDeletionLog {
+  id        String   @id @default(uuid())
+  userId    String
+  deletedAt DateTime @default(now())
+  requestIp String
+
+  @@index([userId])
+  @@index([deletedAt])
 }

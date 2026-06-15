@@ -1,0 +1,87 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboard-blobe-services
+  namespace: monitoring
+  labels:
+    grafana_dashboard: "1"
+data:
+  blobe-services.json: |
+    {
+      "title": "Blobe — Service Latency & Errors",
+      "uid": "blobe-services",
+      "schemaVersion": 39,
+      "refresh": "30s",
+      "time": {"from": "now-1h", "to": "now"},
+      "templating": {
+        "list": [
+          {
+            "name": "service",
+            "type": "query",
+            "datasource": "Prometheus",
+            "query": "label_values(istio_requests_total{destination_service_namespace=\"blobe\"}, destination_service_name)",
+            "includeAll": true,
+            "multi": true,
+            "current": {"text": "All", "value": "$__all"}
+          }
+        ]
+      },
+      "panels": [
+        {
+          "id": 1,
+          "title": "p99 Latency by Service (ms)",
+          "type": "timeseries",
+          "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0},
+          "targets": [
+            {
+              "expr": "histogram_quantile(0.99, sum(rate(istio_request_duration_milliseconds_bucket{reporter=\"destination\", destination_service_namespace=\"blobe\", destination_service_name=~\"$service\"}[5m])) by (destination_service_name, le))",
+              "legendFormat": "p99 {{destination_service_name}}"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {"unit": "ms", "thresholds": {"steps": [{"color": "green", "value": null}, {"color": "yellow", "value": 200}, {"color": "red", "value": 400}]}}
+          }
+        },
+        {
+          "id": 2,
+          "title": "p50 Latency by Service (ms)",
+          "type": "timeseries",
+          "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0},
+          "targets": [
+            {
+              "expr": "histogram_quantile(0.50, sum(rate(istio_request_duration_milliseconds_bucket{reporter=\"destination\", destination_service_namespace=\"blobe\", destination_service_name=~\"$service\"}[5m])) by (destination_service_name, le))",
+              "legendFormat": "p50 {{destination_service_name}}"
+            }
+          ],
+          "fieldConfig": {"defaults": {"unit": "ms"}}
+        },
+        {
+          "id": 3,
+          "title": "Error Rate by Service (%)",
+          "type": "timeseries",
+          "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8},
+          "targets": [
+            {
+              "expr": "sum(rate(istio_requests_total{reporter=\"destination\", destination_service_namespace=\"blobe\", response_code=~\"5.*\", destination_service_name=~\"$service\"}[5m])) by (destination_service_name) / sum(rate(istio_requests_total{reporter=\"destination\", destination_service_namespace=\"blobe\", destination_service_name=~\"$service\"}[5m])) by (destination_service_name) * 100",
+              "legendFormat": "error% {{destination_service_name}}"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {"unit": "percent", "thresholds": {"steps": [{"color": "green", "value": null}, {"color": "red", "value": 1}]}}
+          }
+        },
+        {
+          "id": 4,
+          "title": "Request Rate by Service (rps)",
+          "type": "timeseries",
+          "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8},
+          "targets": [
+            {
+              "expr": "sum(rate(istio_requests_total{reporter=\"destination\", destination_service_namespace=\"blobe\", destination_service_name=~\"$service\"}[5m])) by (destination_service_name)",
+              "legendFormat": "rps {{destination_service_name}}"
+            }
+          ],
+          "fieldConfig": {"defaults": {"unit": "reqps"}}
+        }
+      ]
+    }

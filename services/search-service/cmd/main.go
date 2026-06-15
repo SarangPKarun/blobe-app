@@ -11,12 +11,15 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/logger"
 	"github.com/gofiber/fiber/v2/middleware/recover"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/redis/go-redis/v9"
+	"github.com/valyala/fasthttp/fasthttpadaptor"
 
 	"github.com/blobeNative/search-service/internal/config"
 	"github.com/blobeNative/search-service/internal/es"
 	"github.com/blobeNative/search-service/internal/handler"
 	kafkaconsumer "github.com/blobeNative/search-service/internal/kafka"
+	"github.com/blobeNative/search-service/internal/metrics"
 	"github.com/blobeNative/search-service/internal/trending"
 )
 
@@ -51,6 +54,7 @@ func main() {
 	consumer := kafkaconsumer.New(cfg.KafkaBroker, esClient)
 	consumer.Start(ctx)
 	defer consumer.Close()
+	metrics.StartKafkaLagPoller(ctx, consumer.Reader())
 
 	// --- HTTP handlers ---
 	weightsH := handler.NewWeightsHandler(esClient, trendingCounter)
@@ -68,6 +72,12 @@ func main() {
 
 	app.Get("/health", func(c *fiber.Ctx) error {
 		return c.JSON(fiber.Map{"status": "ok"})
+	})
+
+	promHandler := fasthttpadaptor.NewFastHTTPHandler(promhttp.Handler())
+	app.Get("/metrics", func(c *fiber.Ctx) error {
+		promHandler(c.Context())
+		return nil
 	})
 
 	// --- Graceful shutdown ---

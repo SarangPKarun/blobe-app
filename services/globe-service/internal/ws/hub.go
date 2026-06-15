@@ -3,6 +3,7 @@ package ws
 import (
 	"encoding/json"
 	"sync"
+	"sync/atomic"
 
 	"github.com/gofiber/websocket/v2"
 )
@@ -27,15 +28,27 @@ type outMsg struct {
 
 // Hub manages WebSocket clients and geohash-cell subscriptions.
 type Hub struct {
-	mu    sync.RWMutex
-	cells map[string]map[*Client]struct{}
+	mu        sync.RWMutex
+	cells     map[string]map[*Client]struct{}
+	connCount int64
+	// DisconnectInc is called on each client removal; wired to a Prometheus counter.
+	DisconnectInc func()
 }
 
 func NewHub() *Hub {
-	return &Hub{cells: make(map[string]map[*Client]struct{})}
+	return &Hub{
+		cells:         make(map[string]map[*Client]struct{}),
+		DisconnectInc: func() {}, // no-op until metrics are wired
+	}
+}
+
+// ConnCount returns the current number of active WebSocket connections.
+func (h *Hub) ConnCount() int64 {
+	return atomic.LoadInt64(&h.connCount)
 }
 
 func (h *Hub) NewClient(conn *websocket.Conn) *Client {
+	atomic.AddInt64(&h.connCount, 1)
 	return &Client{conn: conn, send: make(chan []byte, 64), hub: h}
 }
 
@@ -68,6 +81,8 @@ func (h *Hub) removeClient(c *Client) {
 			delete(h.cells, hash)
 		}
 	}
+	atomic.AddInt64(&h.connCount, -1)
+	h.DisconnectInc()
 }
 
 // Broadcast sends a banners_update message to all clients subscribed to geohash.

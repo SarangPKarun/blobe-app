@@ -1,0 +1,73 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: blobe-alerts
+  namespace: monitoring
+  labels:
+    prometheus: kube-prometheus
+    role: alert-rules
+spec:
+  groups:
+    - name: blobe.payment
+      interval: 60s
+      rules:
+        - alert: PaymentErrorRateHigh
+          expr: |
+            (
+              sum(rate(istio_requests_total{
+                reporter="destination",
+                destination_service_namespace="blobe",
+                destination_service_name="payment-service",
+                response_code=~"5.*"
+              }[5m]))
+              /
+              sum(rate(istio_requests_total{
+                reporter="destination",
+                destination_service_namespace="blobe",
+                destination_service_name="payment-service"
+              }[5m]))
+            ) * 100 > 0.1
+          for: 5m
+          labels:
+            severity: critical
+            service: payment-service
+          annotations:
+            summary: "Payment service error rate above 0.1%"
+            description: "Payment error rate is {{ $value | printf \"%.3f\" }}% (threshold: 0.1%) for 5 minutes."
+            runbook_url: "https://github.com/SarangPKarun/blobeNative/blob/main/docs/runbooks/payment-errors.md"
+
+    - name: blobe.globe
+      interval: 60s
+      rules:
+        - alert: GlobeWSDisconnectSpike
+          expr: |
+            rate(globe_ws_disconnections_total[5m])
+            >
+            3 * avg_over_time(rate(globe_ws_disconnections_total[5m])[1h:5m])
+          for: 5m
+          labels:
+            severity: critical
+            service: globe-service
+          annotations:
+            summary: "Globe WebSocket disconnect spike (>3x baseline)"
+            description: "WebSocket disconnect rate is {{ $value | printf \"%.1f\" }}/s, more than 3x the 1-hour baseline."
+            runbook_url: "https://github.com/SarangPKarun/blobeNative/blob/main/docs/runbooks/globe-ws-disconnects.md"
+
+    - name: blobe.latency
+      interval: 60s
+      rules:
+        - alert: APILatencyP99High
+          expr: |
+            histogram_quantile(0.99,
+              sum(rate(istio_request_duration_milliseconds_bucket{
+                reporter="destination",
+                destination_service_namespace="blobe"
+              }[5m])) by (destination_service_name, le)
+            ) > 400
+          for: 5m
+          labels:
+            severity: critical
+          annotations:
+            summary: "API p99 latency above 400ms for service {{ $labels.destination_service_name }}"
+            description: "p99 latency for {{ $labels.destination_service_name }} is {{ $value | printf \"%.0f\" }}ms (threshold: 400ms) for 5 minutes."
+            runbook_url: "https://github.com/SarangPKarun/blobeNative/blob/main/docs/runbooks/api-latency.md"

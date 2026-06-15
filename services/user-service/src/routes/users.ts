@@ -1,7 +1,7 @@
 import { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { prisma } from '../services/db';
-import { publishUserCreated } from '../services/kafka';
+import { publishUserCreated, publishUserDeleted } from '../services/kafka';
 
 export default async function (fastify: FastifyInstance) {
   // Check username uniqueness
@@ -144,7 +144,7 @@ export default async function (fastify: FastifyInstance) {
     }
   );
 
-  // Delete user (GDPR)
+  // Delete user account — GDPR right to erasure (Article 17 GDPR)
   fastify.delete(
     '/:id',
     {
@@ -157,16 +157,49 @@ export default async function (fastify: FastifyInstance) {
     },
     async (request, reply) => {
       const { id } = request.params as { id: string };
-      
+
       if (request.user.id !== id) {
         return reply.code(403).send({ error: 'Forbidden' });
       }
 
-      // Hard delete (cascading deletes depend on Prisma configuration or manual deletion)
-      // Usually you would anonymize or delete related records first.
-      await prisma.user.delete({
-        where: { id },
-      });
+      // Deletion order matters: child records with FK constraints must be removed
+      // before parent records. Payment FKs are nulled (not deleted) for financial audit compliance.
+      await prisma.$transaction([
+        // 1. Ad bids — no other table references these
+        prisma.adBid.deleteMany({ where: { userId: id } }),
+        // 2. Anonymise payments (null sender/recipient; records kept for financial audit)
+        prisma.payment.updateMany({ where: { senderId: id }, data: { senderId: null } }),
+        prisma.payment.updateMany({ where: { recipientId: id }, data: { recipientId: null } }),
+        // 3. Null campaignId on payments that point to this user's campaigns (unblocks campaign delete)
+        prisma.payment.updateMany({
+          where: { campaign: { creatorId: id } },
+          data: { campaignId: null },
+        }),
+        // 4. Campaigns
+        prisma.campaign.deleteMany({ where: { creatorId: id } }),
+        // 5. Votes on this user's posts (other users' votes; unblocks post delete)
+        prisma.vote.deleteMany({ where: { post: { authorId: id } } }),
+        // 6. This user's own votes on others' posts
+        prisma.vote.deleteMany({ where: { userId: id } }),
+        // 7. Chat messages sent by this user (unblocks user delete — no cascade on senderId)
+        prisma.chatMessage.updateMany({ where: { senderId: id }, data: { isDeleted: true } }),
+        // 8. Posts
+        prisma.post.deleteMany({ where: { authorId: id } }),
+        // 9. Follows
+        prisma.follows.deleteMany({ where: { OR: [{ followerId: id }, { followingId: id }] } }),
+        // 10. Trust score
+        prisma.trustScore.deleteMany({ where: { userId: id } }),
+        // 11. Audit log (no FK to User — survives deletion intentionally)
+        prisma.userDeletionLog.create({
+          data: { userId: id, requestIp: request.ip ?? 'unknown' },
+        }),
+        // 12. Delete user — cascades: Notification, NotificationPreference, DeviceToken,
+        //     StripeAccount, UserPublicKey, ConversationParticipant
+        prisma.user.delete({ where: { id } }),
+      ]);
+
+      // Notify downstream services to clean up their own stores (ES index, Redis cache, etc.)
+      await publishUserDeleted(id);
 
       return reply.code(204).send();
     }

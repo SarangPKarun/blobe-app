@@ -9,6 +9,7 @@ import (
 	kgo "github.com/segmentio/kafka-go"
 
 	"github.com/blobeNative/search-service/internal/es"
+	"github.com/blobeNative/search-service/internal/metrics"
 )
 
 type postCreatedPayload struct {
@@ -28,8 +29,9 @@ type kafkaEventWrapper struct {
 }
 
 type Consumer struct {
-	reader *kgo.Reader
-	es     *es.Client
+	reader        *kgo.Reader
+	deletedReader *kgo.Reader
+	es            *es.Client
 }
 
 func New(broker string, esClient *es.Client) *Consumer {
@@ -42,16 +44,57 @@ func New(broker string, esClient *es.Client) *Consumer {
 			MinBytes: 1,
 			MaxBytes: 1 << 20,
 		}),
+		deletedReader: kgo.NewReader(kgo.ReaderConfig{
+			Brokers:  []string{broker},
+			GroupID:  "search-service-group",
+			Topic:    "user.deleted",
+			MaxWait:  500 * time.Millisecond,
+			MinBytes: 1,
+			MaxBytes: 1 << 20,
+		}),
 		es: esClient,
 	}
 }
 
 func (c *Consumer) Start(ctx context.Context) {
 	go c.consume(ctx)
+	go c.consumeUserDeleted(ctx)
 }
 
 func (c *Consumer) Close() {
 	c.reader.Close()
+	c.deletedReader.Close()
+}
+
+// Reader exposes the underlying kafka-go Reader for metrics polling.
+func (c *Consumer) Reader() *kgo.Reader { return c.reader }
+
+type userDeletedPayload struct {
+	ID string `json:"id"`
+}
+
+func (c *Consumer) consumeUserDeleted(ctx context.Context) {
+	for {
+		msg, err := c.deletedReader.ReadMessage(ctx)
+		if err != nil {
+			if ctx.Err() != nil {
+				return
+			}
+			log.Printf("kafka user.deleted read error: %v", err)
+			continue
+		}
+		var p userDeletedPayload
+		if err := json.Unmarshal(msg.Value, &p); err != nil {
+			log.Printf("kafka user.deleted decode error: %v", err)
+			continue
+		}
+		if err := c.es.DeleteByAuthor(ctx, p.ID); err != nil {
+			log.Printf("ES delete by author %s error: %v", p.ID, err)
+			metrics.ESIndexErrors.Inc()
+			continue
+		}
+		log.Printf("GDPR: removed ES documents for user %s", p.ID)
+	}
 }
 
 func (c *Consumer) consume(ctx context.Context) {
@@ -93,8 +136,10 @@ func (c *Consumer) consume(ctx context.Context) {
 
 		if err := c.es.IndexPost(ctx, doc); err != nil {
 			log.Printf("ES index post %s error: %v", p.ID, err)
+			metrics.ESIndexErrors.Inc()
 			continue
 		}
+		metrics.MessagesProcessed.WithLabelValues("posts").Inc()
 		log.Printf("indexed post %s", p.ID)
 	}
 }

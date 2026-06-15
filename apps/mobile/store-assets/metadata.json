@@ -1,0 +1,55 @@
+{
+  "name": "Blobe",
+  "subtitle": "Post on the globe",
+  "description": "Blobe lets you place posts anywhere on Earth and discover what people are sharing around you — or anywhere in the world. Zoom into any location, read posts pinned to the globe, vote on what's worth seeing, and chat directly with other users. Creators can run location-based campaigns and earn from their audience.\n\nFeatures:\n• Place geo-tagged posts on a 3D globe\n• Real-time community trust voting\n• End-to-end encrypted direct messages\n• Location-based creator campaigns with Stripe payouts\n• Privacy-first: delete your account and all data at any time",
+  "keywords": [
+    "globe",
+    "geolocation",
+    "social",
+    "map",
+    "posts",
+    "local",
+    "community",
+    "travel",
+    "creator",
+    "location"
+  ],
+  "primaryCategory": "SOCIAL_NETWORKING",
+  "secondaryCategory": "TRAVEL",
+  "ageRating": "4+",
+  "privacyPolicyUrl": "https://blobe.app/privacy",
+  "supportUrl": "https://blobe.app/support",
+  "marketingUrl": "https://blobe.app",
+  "screenshots": {
+    "ios": {
+      "6.5inch": [
+        "screenshots/ios/01-globe-view.png",
+        "screenshots/ios/02-post-detail.png",
+        "screenshots/ios/03-create-post.png",
+        "screenshots/ios/04-search.png",
+        "screenshots/ios/05-chat.png",
+        "screenshots/ios/06-profile.png"
+      ],
+      "5.5inch": [
+        "screenshots/ios/55-01-globe-view.png",
+        "screenshots/ios/55-02-post-detail.png",
+        "screenshots/ios/55-03-create-post.png"
+      ]
+    },
+    "android": {
+      "phone": [
+        "screenshots/android/01-globe-view.png",
+        "screenshots/android/02-post-detail.png",
+        "screenshots/android/03-create-post.png",
+        "screenshots/android/04-search.png"
+      ]
+    }
+  },
+  "notes": {
+    "screenshots": "Capture on physical device (not simulator) per App Store requirements. iOS 6.5\" = iPhone 14 Pro Max. iOS 5.5\" = iPhone 8 Plus.",
+    "icon": "Provide app-icon-1024.png (1024x1024, RGB, no alpha) in this directory.",
+    "featureGraphic": "Provide feature-graphic-1024x500.png for Google Play in this directory.",
+    "ageRating": "4+ / Everyone — set manually in App Store Connect and Google Play Console (cannot be set via EAS Submit).",
+    "ascAppId": "Set 'ascAppId' in eas.json submit.production.ios before running eas submit --platform ios."
+  }
+}

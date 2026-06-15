@@ -53,6 +53,11 @@ spec:
                 secretKeyRef:
                   name: blobe-firebase-credentials
                   key: credentials
+            - name: SENTRY_DSN
+              valueFrom:
+                secretKeyRef:
+                  name: blobe-sentry-dsn
+                  key: dsn
           livenessProbe:
             httpGet:
               path: /health

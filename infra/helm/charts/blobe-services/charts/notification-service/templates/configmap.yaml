@@ -7,3 +7,5 @@ data:
   PORT: "3003"
   NODE_ENV: "production"
   REGION: {{ .Values.global.region | default "us-east-1" | quote }}
+  SENTRY_ENVIRONMENT: {{ .Values.global.environment | default "production" | quote }}
+  SENTRY_RELEASE: {{ .Values.image.tag | default "unknown" | quote }}

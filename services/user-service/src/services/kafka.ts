@@ -22,14 +22,24 @@ export const disconnectKafka = async () => {
 
 export const publishUserCreated = async (user: { id: string; email?: string; phone?: string; username?: string }) => {
   if (process.env.NODE_ENV === 'test') {
-    return; // Mocked for tests
+    return;
   }
   await producer.send({
     topic: 'user.created',
+    messages: [{ key: user.id, value: JSON.stringify(user) }],
+  });
+};
+
+export const publishUserDeleted = async (userId: string) => {
+  if (process.env.NODE_ENV === 'test') {
+    return;
+  }
+  await producer.send({
+    topic: 'user.deleted',
     messages: [
       {
-        key: user.id,
-        value: JSON.stringify(user),
+        key: userId,
+        value: JSON.stringify({ id: userId, deletedAt: new Date().toISOString() }),
       },
     ],
   });

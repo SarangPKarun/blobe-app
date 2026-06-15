@@ -2,8 +2,11 @@ import asyncio
 import logging
 from contextlib import asynccontextmanager
 
+import sentry_sdk
 import uvicorn
 from fastapi import FastAPI
+from sentry_sdk.integrations.fastapi import FastApiIntegration
+from sentry_sdk.integrations.sqlalchemy import SqlalchemyIntegration
 
 from .classifiers.phash import load_phash_cache
 from .classifiers.text import load_text_model
@@ -15,6 +18,15 @@ from .routes import queue
 
 logging.basicConfig(level=logging.INFO)
 _log = logging.getLogger(__name__)
+
+if settings.sentry_dsn:
+    sentry_sdk.init(
+        dsn=settings.sentry_dsn,
+        environment=settings.sentry_environment,
+        server_name="moderation-service",
+        traces_sample_rate=0.1,
+        integrations=[FastApiIntegration(), SqlalchemyIntegration()],
+    )
 
 _phash_refresh_task: asyncio.Task | None = None
 

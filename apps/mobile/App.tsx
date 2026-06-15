@@ -1,3 +1,4 @@
+import * as Sentry from '@sentry/react-native';
 import React from 'react';
 import { View, StyleSheet } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
@@ -6,7 +7,15 @@ import AppNavigator from './src/navigation/AppNavigator';
 import { GlobeProvider } from './src/context/GlobeContext';
 import PersistentGlobeWebView from './src/components/PersistentGlobeWebView';
 
-export default function App() {
+Sentry.init({
+  dsn: process.env.SENTRY_DSN ?? '',
+  environment: process.env.APP_ENV ?? 'production',
+  tracesSampleRate: 0.2,
+  // Automatically captures JS crashes, unhandled promise rejections, and native crashes.
+  enableNativeCrashHandling: true,
+});
+
+function App() {
   return (
     <SafeAreaProvider>
       <GlobeProvider>
@@ -20,6 +29,8 @@ export default function App() {
     </SafeAreaProvider>
   );
 }
+
+export default Sentry.wrap(App);
 
 const styles = StyleSheet.create({
   root: { flex: 1 },

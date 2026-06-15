@@ -14,6 +14,10 @@ spec:
     metadata:
       labels:
         app: {{ .Release.Name }}
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "3005"
+        prometheus.io/path: "/metrics"
     spec:
       serviceAccountName: {{ .Release.Name }}
       containers:
